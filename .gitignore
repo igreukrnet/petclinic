@@ -1,0 +1,22 @@
+# Maven build output
+target/
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Allure CLI downloads
+.allure/
+**/.allure/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# OS and tools
+.DS_Store
+Thumbs.db
+.kilo/
