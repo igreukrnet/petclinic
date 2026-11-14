@@ -20,6 +20,10 @@ public class OwnersPage extends BasePage {
     public OwnersPage search(String query) {
         waitForLoadingSpinner();
         Locator queryInput = page.locator("input[placeholder*='Search'], #owner-query, input[name='query'], input[type='search'], input[ng-model*='query']").first();
+        if (queryInput.count() == 0) {
+            navigate("/owners");
+            queryInput = page.locator("input[placeholder*='Search'], #owner-query, input[name='query'], input[type='search'], input[ng-model*='query']").first();
+        }
         queryInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
         queryInput.fill(query);
         return this;

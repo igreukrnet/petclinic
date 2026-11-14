@@ -18,22 +18,55 @@ public class OwnerDetailsPage extends BasePage {
     @Step("Get owner full name")
     public String getOwnerName() {
         waitForLoadingSpinner();
-        return page.locator("table tr:has(th:has-text('Name')) td").textContent().trim();
+        com.microsoft.playwright.Locator locator = page.locator("table tr:has(th:has-text('Name')) td, table tr:has(td:has-text('Name')) td:nth-child(2)").first();
+        locator.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(10000));
+        return locator.textContent().trim();
     }
 
     @Step("Get owner address")
     public String getAddress() {
-        return page.locator("table tr:has(th:has-text('Address')) td").textContent().trim();
+        waitForLoadingSpinner();
+        com.microsoft.playwright.Locator locator = page.locator("table tr:has(th:has-text('Address')) td, table tr:has(td:has-text('Address')) td:nth-child(2)").first();
+        locator.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(10000));
+        // In AngularJS, data binds asynchronously; wait until text is populated
+        for (int i = 0; i < 20; i++) {
+            String text = locator.textContent().trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+        }
+        return locator.textContent().trim();
     }
 
     @Step("Get owner city")
     public String getCity() {
-        return page.locator("table tr:has(th:has-text('City')) td").textContent().trim();
+        waitForLoadingSpinner();
+        com.microsoft.playwright.Locator locator = page.locator("table tr:has(th:has-text('City')) td, table tr:has(td:has-text('City')) td:nth-child(2)").first();
+        locator.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(10000));
+        for (int i = 0; i < 20; i++) {
+            String text = locator.textContent().trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+        }
+        return locator.textContent().trim();
     }
 
     @Step("Get owner telephone")
     public String getTelephone() {
-        return page.locator("table tr:has(th:has-text('Telephone')) td").textContent().trim();
+        waitForLoadingSpinner();
+        com.microsoft.playwright.Locator locator = page.locator("table tr:has(th:has-text('Telephone')) td, table tr:has(td:has-text('Telephone')) td:nth-child(2)").first();
+        locator.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(10000));
+        for (int i = 0; i < 20; i++) {
+            String text = locator.textContent().trim();
+            if (!text.isEmpty()) {
+                return text;
+            }
+            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+        }
+        return locator.textContent().trim();
     }
 
     @Step("Click 'Edit Owner'")

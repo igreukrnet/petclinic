@@ -49,7 +49,7 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
         ownerFormPage.fillForm(ownerReq).submit();
 
         // Step 3: Find owner in Owners table
-        OwnersPage ownersPage = new OwnersPage(page);
+        OwnersPage ownersPage = new OwnersPage(page).open();
         ownersPage.search(ownerReq.lastName());
         assertThat(ownersPage.isOwnerPresent(fullName)).isTrue();
 

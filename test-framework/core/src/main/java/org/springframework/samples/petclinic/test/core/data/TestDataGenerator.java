@@ -15,23 +15,24 @@ public class TestDataGenerator {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public static OwnerRequest generateOwnerRequest() {
-        String firstName = FAKER.name().firstName();
-        String lastName = FAKER.name().lastName();
+        String firstName = FAKER.name().firstName().replaceAll("[^a-zA-Z]", "");
+        String lastName = FAKER.name().lastName().replaceAll("[^a-zA-Z]", "");
         String address = FAKER.address().streetAddress();
         String city = FAKER.address().city();
-        // Strict digits up to 12 chars: @Digits(fraction = 0, integer = 12)
-        String telephone = FAKER.number().digits(10);
+        // Strict digits up to 12 chars: @Digits(fraction = 0, integer = 12), ensure starting with non-zero digit
+        String telephone = String.valueOf(FAKER.number().numberBetween(1000000000L, 9999999999L));
 
         return new OwnerRequest(firstName, lastName, address, city, telephone);
     }
 
     public static OwnerRequest generateOwnerRequest(String lastName) {
-        String firstName = FAKER.name().firstName();
+        String firstName = FAKER.name().firstName().replaceAll("[^a-zA-Z]", "");
+        String cleanLastName = lastName.replaceAll("[^a-zA-Z]", "");
         String address = FAKER.address().streetAddress();
         String city = FAKER.address().city();
-        String telephone = FAKER.number().digits(10);
+        String telephone = String.valueOf(FAKER.number().numberBetween(1000000000L, 9999999999L));
 
-        return new OwnerRequest(firstName, lastName, address, city, telephone);
+        return new OwnerRequest(firstName, cleanLastName, address, city, telephone);
     }
 
     public static PetRequest generatePetRequest(int typeId) {
