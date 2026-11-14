@@ -61,7 +61,13 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Stage 1 - Run Component Tests
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'component'
+        run: |
+          mvn -B test -pl component-tests -am -f test-framework/pom.xml
+
       - name: Cache Playwright Browsers
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         id: playwright-cache
         uses: actions/cache@v4
         with:
@@ -73,8 +79,8 @@ jobs:
       - name: Install Playwright OS Dependencies
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
-          mvn -B compile -f test-framework/pom.xml
-          mvn -B exec:java -e \
+          mvn -B compile -pl e2e-tests -am -f test-framework/pom.xml
+          mvn -B exec:java -pl e2e-tests -e \
             -Dexec.mainClass=com.microsoft.playwright.CLI \
             -Dexec.args="install-deps chromium" \
             -f test-framework/pom.xml
@@ -82,15 +88,10 @@ jobs:
       - name: Install Playwright Chromium Browser
         if: (github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e') && steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
-          mvn -B exec:java -e \
+          mvn -B exec:java -pl e2e-tests -e \
             -Dexec.mainClass=com.microsoft.playwright.CLI \
             -Dexec.args="install chromium" \
             -f test-framework/pom.xml
-
-      - name: Stage 1 - Run Component Tests
-        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'component'
-        run: |
-          mvn -B test -pl component-tests -am -f test-framework/pom.xml
 
       - name: Start PetClinic Microservices & MySQL (for E2E)
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
