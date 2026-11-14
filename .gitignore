@@ -1,11 +1,45 @@
-# Maven build output
+# Maven and Gradle build output
 target/
 **/target/
+build/
+**/build/
 !.mvn/wrapper/maven-wrapper.jar
 
-# Allure CLI downloads
+# Allure reports and downloads
 .allure/
 **/.allure/
+allure-results/
+**/allure-results/
+allure-report/
+**/allure-report/
+
+# Test output and Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Environment variables and secrets
+.env
+*.env
+*.env.*
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.credentials
 
 # IDE files
 .idea/
@@ -20,3 +54,4 @@ target/
 .DS_Store
 Thumbs.db
 .kilo/
+
