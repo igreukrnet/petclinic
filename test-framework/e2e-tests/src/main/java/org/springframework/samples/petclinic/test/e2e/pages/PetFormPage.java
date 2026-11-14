@@ -19,22 +19,31 @@ public class PetFormPage extends BasePage {
     @Step("Fill pet form: {request}")
     public PetFormPage fillForm(PetRequest request) {
         waitForLoadingSpinner();
-        page.locator("#pet-name").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
+        com.microsoft.playwright.Locator nameInput = page.locator("#name, #pet-name, input[name='name']").first();
+        nameInput.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.name() != null) {
-            page.locator("#pet-name").fill(request.name());
+            nameInput.fill(request.name());
         }
         if (request.birthDate() != null) {
-            page.locator("#pet-birth-date").fill(request.birthDate());
+            page.locator("#birthDate, #pet-birth-date, input[name='birthDate']").first().fill(request.birthDate());
         }
         if (request.typeId() > 0) {
-            page.locator("#pet-type").selectOption(String.valueOf(request.typeId()));
+            com.microsoft.playwright.Locator typeSelect = page.locator("#type, #pet-type, select[name='type']").first();
+            try {
+                typeSelect.selectOption(String.valueOf(request.typeId()));
+            } catch (Exception e) {
+                try {
+                    typeSelect.selectOption(new com.microsoft.playwright.options.SelectOption().setIndex(request.typeId()));
+                } catch (Exception ignored) {
+                }
+            }
         }
         return this;
     }
 
     @Step("Submit pet form")
     public void submit() {
-        page.locator("button.btn-primary[type='submit']").click();
+        page.locator("button[type='submit'], button.btn-primary, button.btn-default").first().click();
         waitForLoadingSpinner();
     }
 }

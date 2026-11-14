@@ -19,19 +19,20 @@ public class VisitsPage extends BasePage {
     @Step("Fill visit form: {request}")
     public VisitsPage fillForm(VisitRequest request) {
         waitForLoadingSpinner();
-        page.locator("#visit-date").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
+        com.microsoft.playwright.Locator dateInput = page.locator("#date, #visit-date, input[name='date']").first();
+        dateInput.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.date() != null) {
-            page.locator("#visit-date").fill(request.date());
+            dateInput.fill(request.date());
         }
         if (request.description() != null) {
-            page.locator("#visit-description").fill(request.description());
+            page.locator("#description, #visit-description, textarea[name='description'], input[name='description']").first().fill(request.description());
         }
         return this;
     }
 
     @Step("Submit visit form")
     public void submit() {
-        page.locator("button.btn-primary[type='submit']").click();
+        page.locator("button[type='submit'], button.btn-primary, button.btn-default").first().click();
         waitForLoadingSpinner();
     }
 }

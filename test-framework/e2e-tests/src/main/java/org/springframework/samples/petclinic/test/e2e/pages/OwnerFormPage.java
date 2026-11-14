@@ -25,21 +25,22 @@ public class OwnerFormPage extends BasePage {
     @Step("Fill owner form: {request}")
     public OwnerFormPage fillForm(OwnerRequest request) {
         waitForLoadingSpinner();
-        page.locator("#owner-first-name").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
+        com.microsoft.playwright.Locator firstNameInput = page.locator("#firstName, #owner-first-name, input[name='firstName']").first();
+        firstNameInput.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.firstName() != null) {
-            page.locator("#owner-first-name").fill(request.firstName());
+            firstNameInput.fill(request.firstName());
         }
         if (request.lastName() != null) {
-            page.locator("#owner-last-name").fill(request.lastName());
+            page.locator("#lastName, #owner-last-name, input[name='lastName']").first().fill(request.lastName());
         }
         if (request.address() != null) {
-            page.locator("#owner-address").fill(request.address());
+            page.locator("#address, #owner-address, input[name='address']").first().fill(request.address());
         }
         if (request.city() != null) {
-            page.locator("#owner-city").fill(request.city());
+            page.locator("#city, #owner-city, input[name='city']").first().fill(request.city());
         }
         if (request.telephone() != null) {
-            page.locator("#owner-telephone").fill(request.telephone());
+            page.locator("#telephone, #owner-telephone, input[name='telephone']").first().fill(request.telephone());
         }
         return this;
     }
@@ -47,13 +48,15 @@ public class OwnerFormPage extends BasePage {
     @Step("Fill and update address to: {newAddress}")
     public OwnerFormPage updateAddress(String newAddress) {
         waitForLoadingSpinner();
-        page.locator("#owner-address").fill(newAddress);
+        com.microsoft.playwright.Locator addressInput = page.locator("#address, #owner-address, input[name='address']").first();
+        addressInput.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
+        addressInput.fill(newAddress);
         return this;
     }
 
     @Step("Submit owner form")
     public void submit() {
-        page.locator("button.btn-primary[type='submit']").click();
+        page.locator("button[type='submit'], button.btn-primary, button.btn-default").first().click();
         waitForLoadingSpinner();
     }
 }

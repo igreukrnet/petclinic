@@ -54,24 +54,28 @@ public abstract class BasePage {
         }
 
         if (targetPath.equals("/") || targetPath.equals("/welcome")) {
-            if (page.locator("a[title='home page']").count() > 0) {
-                page.locator("a[title='home page']").click();
+            Locator homeLink = page.locator("a:has-text('Home'), a:has-text('HOME'), a[title*='home']").first();
+            if (homeLink.count() > 0) {
+                homeLink.click();
             }
         } else if (targetPath.equals("/owners/new")) {
-            if (page.locator("a[title='register owner']").count() > 0) {
-                page.locator("a[title='register owner']").click();
+            Locator newOwnerLink = page.locator("a:has-text('Register owner'), a:has-text('REGISTER OWNER'), a[title*='register owner'], a[href*='owners/new']").first();
+            if (newOwnerLink.count() > 0) {
+                newOwnerLink.click();
             } else {
                 navigateToSpaRoute(targetPath);
             }
         } else if (targetPath.equals("/owners")) {
-            if (page.locator("a[title='find owners']").count() > 0) {
-                page.locator("a[title='find owners']").click();
+            Locator ownersLink = page.locator("a:has-text('Find owners'), a:has-text('FIND OWNERS'), a[title*='find owners'], a[href*='owners']").first();
+            if (ownersLink.count() > 0) {
+                ownersLink.click();
             } else {
                 navigateToSpaRoute(targetPath);
             }
         } else if (targetPath.equals("/vets")) {
-            if (page.locator("a[title='veterinarians']").count() > 0) {
-                page.locator("a[title='veterinarians']").click();
+            Locator vetsLink = page.locator("a:has-text('Veterinarians'), a:has-text('VETERINARIANS'), a[title*='veterinarians'], a[href*='vets']").first();
+            if (vetsLink.count() > 0) {
+                vetsLink.click();
             } else {
                 navigateToSpaRoute(targetPath);
             }
@@ -90,8 +94,7 @@ public abstract class BasePage {
                 "    if (appEl && appEl.__vue_app__ && appEl.__vue_app__.config && appEl.__vue_app__.config.globalProperties.$router) {\n" +
                 "        appEl.__vue_app__.config.globalProperties.$router.push(target);\n" +
                 "    } else {\n" +
-                "        window.history.pushState({}, '', target);\n" +
-                "        window.dispatchEvent(new PopStateEvent('popstate'));\n" +
+                "        window.location.hash = '!' + target;\n" +
                 "    }\n" +
                 "}", targetPath);
         } catch (Exception e) {
