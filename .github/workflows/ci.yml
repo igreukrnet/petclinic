@@ -6,18 +6,51 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        type: choice
+        default: 'all'
+        options:
+          - all
+          - component
+          - e2e
+      publish_report:
+        description: 'Publish Allure Report to AWS S3 & CloudFront'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
   id-token: write
 
+env:
+  MAVEN_OPTS: "-Xmx2048m -XX:+UseG1GC -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss:SSS"
+
 jobs:
   test:
-    name: Run Automated Tests & Generate Allure Report
+    name: Execute Tests & Generate Reports
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
 
     steps:
+      - name: Free Disk Space (Ubuntu Runner)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false
+          swap-storage: false
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -28,22 +61,64 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Start PetClinic Microservices & MySQL
-        run: |
-          docker compose -f docker-compose.test.yml up -d --wait
-          docker compose -f docker-compose.test.yml ps
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('test-framework/pom.xml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright OS Dependencies
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
           mvn -B compile -f test-framework/pom.xml
           mvn -B exec:java -e \
             -Dexec.mainClass=com.microsoft.playwright.CLI \
-            -Dexec.args="install --with-deps chromium" \
+            -Dexec.args="install-deps chromium" \
             -f test-framework/pom.xml
 
-      - name: Run Component & E2E Tests
+      - name: Install Playwright Chromium Browser
+        if: (github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e') && steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
-          mvn -B clean test -f test-framework/pom.xml
+          mvn -B exec:java -e \
+            -Dexec.mainClass=com.microsoft.playwright.CLI \
+            -Dexec.args="install chromium" \
+            -f test-framework/pom.xml
+
+      - name: Stage 1 - Run Component Tests
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'component'
+        run: |
+          mvn -B test -pl component-tests -am -f test-framework/pom.xml
+
+      - name: Start PetClinic Microservices & MySQL (for E2E)
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
+        run: |
+          docker compose -f docker-compose.test.yml up -d --wait
+          docker compose -f docker-compose.test.yml ps
+
+      - name: Stage 2 - Run E2E Tests
+        if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
+        run: |
+          mvn -B test -pl e2e-tests -am -f test-framework/pom.xml
+
+      - name: Restore Allure History from AWS S3
+        if: always() && env.CAN_ACCESS_AWS == 'true'
+        env:
+          CAN_ACCESS_AWS: ${{ secrets.AWS_ACCESS_KEY_ID != '' && vars.S3_BUCKET_NAME != '' }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'eu-north-1' }}
+          S3_BUCKET: ${{ vars.S3_BUCKET_NAME }}
+        run: |
+          aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
+          aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+          aws configure set default.region "$AWS_REGION"
+          
+          mkdir -p target/allure-results/history
+          mkdir -p test-framework/target/allure-results/history
+          echo "Restoring previous Allure history from s3://${S3_BUCKET}/latest/history/..."
+          aws s3 cp "s3://${S3_BUCKET}/latest/history" target/allure-results/history --recursive || true
+          aws s3 cp "s3://${S3_BUCKET}/latest/history" test-framework/target/allure-results/history --recursive || true
 
       - name: Generate Allure Report
         if: always()
@@ -55,7 +130,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: target/allure-results
+          path: |
+            target/allure-results
+            test-framework/target/allure-results
           retention-days: 14
 
       - name: Upload Allure HTML Report Artifact
@@ -69,12 +146,12 @@ jobs:
           retention-days: 30
 
       - name: Publish Allure Report to AWS S3 & CloudFront
-        if: always() && env.HAVE_AWS_SECRETS == 'true'
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_report == true) && env.CAN_PUBLISH == 'true'
         env:
-          HAVE_AWS_SECRETS: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
-          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-          S3_BUCKET: ${{ secrets.ALLURE_S3_BUCKET }}
-          CLOUDFRONT_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          CAN_PUBLISH: ${{ secrets.AWS_ACCESS_KEY_ID != '' && vars.S3_BUCKET_NAME != '' }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'eu-north-1' }}
+          S3_BUCKET: ${{ vars.S3_BUCKET_NAME }}
+          CLOUDFRONT_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
           aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
@@ -85,18 +162,41 @@ jobs:
             REPORT_DIR="test-framework/target/site/allure-maven-plugin"
           fi
           
-          if [ -d "$REPORT_DIR" ] && [ -n "$S3_BUCKET" ]; then
-            echo "Deploying Allure report to s3://$S3_BUCKET/latest/..."
-            aws s3 sync "$REPORT_DIR" "s3://$S3_BUCKET/latest/" --delete
+          if [ -d "$REPORT_DIR" ]; then
+            echo "Deploying Allure report to s3://${S3_BUCKET}/latest/..."
+            aws s3 sync "$REPORT_DIR" "s3://${S3_BUCKET}/latest/" --delete
             
-            BUILD_PATH="s3://$S3_BUCKET/builds/${{ github.run_number }}/"
+            BUILD_PATH="s3://${S3_BUCKET}/builds/${{ github.run_number }}/"
             echo "Archiving report build to $BUILD_PATH..."
             aws s3 sync "$REPORT_DIR" "$BUILD_PATH"
             
+            CF_DOMAIN=""
             if [ -n "$CLOUDFRONT_ID" ]; then
               echo "Invalidating CloudFront cache..."
               aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_ID" --paths "/*"
+              CF_DOMAIN=$(aws cloudfront get-distribution --id "$CLOUDFRONT_ID" --query "Distribution.DomainName" --output text 2>/dev/null || echo "")
             fi
+            
+            if [ -n "$CF_DOMAIN" ]; then
+              REPORT_URL="https://${CF_DOMAIN}"
+            else
+              REPORT_URL="https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/latest/index.html"
+            fi
+            
+            echo "### 📊 Allure Test Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 **Live Report URL:** [$REPORT_URL]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+            echo "| **S3 Bucket** | \`${S3_BUCKET}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **CloudFront ID** | \`${CLOUDFRONT_ID}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Build Number** | \`#${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Trigger** | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Ref / Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Timestamp** | \`$(date -u '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Warning: Allure report directory not found, skipping S3 upload."
           fi
 
       - name: Stop Containers
