@@ -11,5 +11,13 @@
     <file url="file://$PROJECT_DIR$/app/spring-petclinic-visits-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/component-tests/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/component-tests/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/e2e-tests/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/e2e-tests/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/test-framework/src/main/resources" charset="UTF-8" />
   </component>
 </project>
