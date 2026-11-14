@@ -92,14 +92,20 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
           docker compose -f docker-compose.test.yml up -d --wait
-          echo "Waiting for API Gateway to be ready on http://localhost:8080..."
-          for i in {1..30}; do
-            if curl -s -f http://localhost:8080/ > /dev/null 2>&1; then
-              echo "API Gateway is UP and responding!"
+          echo "Waiting for all microservices to be registered in Eureka and routable via API Gateway..."
+          for i in {1..45}; do
+            CUST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/customer/owners || true)
+            VET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/vet/vets || true)
+            VISIT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/visit/owners/1/pets/1/visits || true)
+            
+            echo "Readiness probe ($i/45): customers=$CUST_STATUS, vets=$VET_STATUS, visits=$VISIT_STATUS"
+            if [ "$CUST_STATUS" != "503" ] && [ "$CUST_STATUS" != "000" ] && \
+               [ "$VET_STATUS" != "503" ] && [ "$VET_STATUS" != "000" ] && \
+               [ "$VISIT_STATUS" != "503" ] && [ "$VISIT_STATUS" != "000" ]; then
+              echo "All microservices are registered in Eureka and responding through API Gateway!"
               break
             fi
-            echo "Waiting for gateway... ($i/30)"
-            sleep 2
+            sleep 3
           done
           docker compose -f docker-compose.test.yml ps
 
