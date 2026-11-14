@@ -144,3 +144,47 @@ data "aws_iam_policy_document" "s3_policy" {
     }
   }
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IAM User & Least-Privilege Credentials for GitHub Actions CI/CD
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_user" "github_actions" {
+  name = "github-actions-${var.project_name}"
+}
+
+resource "aws_iam_access_key" "github_actions" {
+  user = aws_iam_user.github_actions.name
+}
+
+resource "aws_iam_user_policy" "github_actions_ci" {
+  name = "github-actions-ci-reports"
+  user = aws_iam_user.github_actions.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          aws_s3_bucket.allure_reports.arn,
+          "${aws_s3_bucket.allure_reports.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation"
+        ]
+        Resource = aws_cloudfront_distribution.allure_reports.arn
+      }
+    ]
+  })
+}
+
