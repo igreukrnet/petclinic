@@ -44,10 +44,59 @@ public abstract class BasePage {
 
     @Step("Navigate to: {path}")
     public void navigate(String path) {
-        String fullUrl = baseUrl + (path.startsWith("/") ? path : "/" + path);
-        page.navigate(fullUrl);
+        String targetPath = (path == null || path.isEmpty() || path.equals("/")) ? "/" : (path.startsWith("/") ? path : "/" + path);
+        String currentUrl = page.url();
+
+        // If the browser is not yet on the app or on about:blank or error page, load root SPA first
+        if (currentUrl == null || !currentUrl.startsWith(baseUrl) || currentUrl.contains("error") || page.locator("#app").count() == 0) {
+            page.navigate(baseUrl + "/");
+            page.waitForSelector("#main-navbar, #app", new Page.WaitForSelectorOptions().setTimeout(25000));
+        }
+
+        if (targetPath.equals("/") || targetPath.equals("/welcome")) {
+            if (page.locator("a[title='home page']").count() > 0) {
+                page.locator("a[title='home page']").click();
+            }
+        } else if (targetPath.equals("/owners/new")) {
+            if (page.locator("a[title='register owner']").count() > 0) {
+                page.locator("a[title='register owner']").click();
+            } else {
+                navigateToSpaRoute(targetPath);
+            }
+        } else if (targetPath.equals("/owners")) {
+            if (page.locator("a[title='find owners']").count() > 0) {
+                page.locator("a[title='find owners']").click();
+            } else {
+                navigateToSpaRoute(targetPath);
+            }
+        } else if (targetPath.equals("/vets")) {
+            if (page.locator("a[title='veterinarians']").count() > 0) {
+                page.locator("a[title='veterinarians']").click();
+            } else {
+                navigateToSpaRoute(targetPath);
+            }
+        } else {
+            navigateToSpaRoute(targetPath);
+        }
+
         waitForLoadingSpinner();
         hideOverlays();
+    }
+
+    private void navigateToSpaRoute(String targetPath) {
+        try {
+            page.evaluate("target => {\n" +
+                "    const appEl = document.querySelector('#app');\n" +
+                "    if (appEl && appEl.__vue_app__ && appEl.__vue_app__.config && appEl.__vue_app__.config.globalProperties.$router) {\n" +
+                "        appEl.__vue_app__.config.globalProperties.$router.push(target);\n" +
+                "    } else {\n" +
+                "        window.history.pushState({}, '', target);\n" +
+                "        window.dispatchEvent(new PopStateEvent('popstate'));\n" +
+                "    }\n" +
+                "}", targetPath);
+        } catch (Exception e) {
+            page.navigate(baseUrl + targetPath);
+        }
     }
 
     public void hideOverlays() {

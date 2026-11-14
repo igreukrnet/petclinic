@@ -19,6 +19,7 @@ public class VisitsPage extends BasePage {
     @Step("Fill visit form: {request}")
     public VisitsPage fillForm(VisitRequest request) {
         waitForLoadingSpinner();
+        page.locator("#visit-date").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.date() != null) {
             page.locator("#visit-date").fill(request.date());
         }

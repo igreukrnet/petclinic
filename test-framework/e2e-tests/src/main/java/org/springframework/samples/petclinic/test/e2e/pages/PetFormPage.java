@@ -19,6 +19,7 @@ public class PetFormPage extends BasePage {
     @Step("Fill pet form: {request}")
     public PetFormPage fillForm(PetRequest request) {
         waitForLoadingSpinner();
+        page.locator("#pet-name").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.name() != null) {
             page.locator("#pet-name").fill(request.name());
         }

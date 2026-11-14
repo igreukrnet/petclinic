@@ -18,6 +18,8 @@ public class OwnersPage extends BasePage {
 
     @Step("Search owners by query: {query}")
     public OwnersPage search(String query) {
+        waitForLoadingSpinner();
+        page.locator("#owner-query").waitFor(new Locator.WaitForOptions().setTimeout(15000));
         page.locator("#owner-query").fill(query);
         return this;
     }

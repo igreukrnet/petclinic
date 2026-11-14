@@ -25,6 +25,7 @@ public class OwnerFormPage extends BasePage {
     @Step("Fill owner form: {request}")
     public OwnerFormPage fillForm(OwnerRequest request) {
         waitForLoadingSpinner();
+        page.locator("#owner-first-name").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
         if (request.firstName() != null) {
             page.locator("#owner-first-name").fill(request.firstName());
         }
