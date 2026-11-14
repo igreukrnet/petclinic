@@ -93,19 +93,17 @@ jobs:
         run: |
           docker compose -f docker-compose.test.yml up -d --wait
           echo "Waiting for all microservices to be registered in Eureka and routable via API Gateway..."
-          for i in {1..45}; do
+          for i in {1..60}; do
             CUST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/customer/owners || true)
             VET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/vet/vets || true)
             VISIT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/visit/owners/1/pets/1/visits || true)
             
-            echo "Readiness probe ($i/45): customers=$CUST_STATUS, vets=$VET_STATUS, visits=$VISIT_STATUS"
-            if [ "$CUST_STATUS" != "503" ] && [ "$CUST_STATUS" != "000" ] && \
-               [ "$VET_STATUS" != "503" ] && [ "$VET_STATUS" != "000" ] && \
-               [ "$VISIT_STATUS" != "503" ] && [ "$VISIT_STATUS" != "000" ]; then
-              echo "All microservices are registered in Eureka and responding through API Gateway!"
+            echo "Readiness probe ($i/60): customers=$CUST_STATUS, vets=$VET_STATUS, visits=$VISIT_STATUS"
+            if [ "$CUST_STATUS" = "200" ] && [ "$VET_STATUS" = "200" ] && [ "$VISIT_STATUS" = "200" ]; then
+              echo "All microservices are fully registered in Eureka and returning HTTP 200 via API Gateway!"
               break
             fi
-            sleep 3
+            sleep 4
           done
           docker compose -f docker-compose.test.yml ps
 
