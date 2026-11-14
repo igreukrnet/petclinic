@@ -55,16 +55,20 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Build and install internal test-framework modules
+        run: |
+          mvn -B install -DskipTests -f test-framework/pom.xml
+
       - name: Stage 1 - Run Component Tests
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'component'
         run: |
-          mvn -B test -pl component-tests -am -f test-framework/pom.xml
+          mvn -B test -pl component-tests -f test-framework/pom.xml
 
       - name: Cache Playwright Browsers
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
@@ -76,21 +80,12 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
-      - name: Install Playwright OS Dependencies
+      - name: Install Playwright Browsers & Dependencies
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
-          mvn -B compile -pl e2e-tests -am -f test-framework/pom.xml
           mvn -B exec:java -pl e2e-tests -e \
             -Dexec.mainClass=com.microsoft.playwright.CLI \
-            -Dexec.args="install-deps chromium" \
-            -f test-framework/pom.xml
-
-      - name: Install Playwright Chromium Browser
-        if: (github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e') && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          mvn -B exec:java -pl e2e-tests -e \
-            -Dexec.mainClass=com.microsoft.playwright.CLI \
-            -Dexec.args="install chromium" \
+            -Dexec.args="install --with-deps chromium" \
             -f test-framework/pom.xml
 
       - name: Start PetClinic Microservices & MySQL (for E2E)
