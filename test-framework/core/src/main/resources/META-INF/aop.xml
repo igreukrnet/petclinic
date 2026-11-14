@@ -1,6 +1,7 @@
 <aspectj>
     <weaver options="-Xset:weaveJavaPackages=false,weaveJavaxPackages=false">
         <include within="org.springframework.samples.petclinic..*"/>
+        <include within="io.qameta.allure..*"/>
         <exclude within="java..*"/>
         <exclude within="javax..*"/>
         <exclude within="jdk..*"/>
