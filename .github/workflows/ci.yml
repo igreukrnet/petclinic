@@ -92,12 +92,21 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
           docker compose -f docker-compose.test.yml up -d --wait
+          echo "Waiting for API Gateway to be ready on http://localhost:8080..."
+          for i in {1..30}; do
+            if curl -s -f http://localhost:8080/ > /dev/null 2>&1; then
+              echo "API Gateway is UP and responding!"
+              break
+            fi
+            echo "Waiting for gateway... ($i/30)"
+            sleep 2
+          done
           docker compose -f docker-compose.test.yml ps
 
       - name: Stage 2 - Run E2E Tests
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'e2e'
         run: |
-          mvn -B test -pl e2e-tests -am -f test-framework/pom.xml
+          mvn -B test -pl e2e-tests -f test-framework/pom.xml
 
       - name: Restore Allure History from AWS S3
         if: always() && env.CAN_ACCESS_AWS == 'true'
@@ -174,7 +183,7 @@ jobs:
             fi
             
             if [ -n "$CF_DOMAIN" ]; then
-              REPORT_URL="https://${CF_DOMAIN}"
+              REPORT_URL="https://${CF_DOMAIN}/latest/index.html"
             else
               REPORT_URL="https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/latest/index.html"
             fi

@@ -160,6 +160,33 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-aspectjweaver</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.aspectj</groupId>
+                                    <artifactId>aspectjweaver</artifactId>
+                                    <version>${aspectj.version}</version>
+                                    <outputDirectory>${project.build.directory}/agent</outputDirectory>
+                                    <destFileName>aspectjweaver.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -177,7 +204,7 @@
                     <version>${maven-surefire.version}</version>
                     <configuration>
                         <argLine>
-                            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                            -javaagent:"${project.build.directory}/agent/aspectjweaver.jar"
                         </argLine>
                         <systemPropertyVariables>
                             <allure.results.directory>${maven.multiModuleProjectDirectory}/target/allure-results</allure.results.directory>
