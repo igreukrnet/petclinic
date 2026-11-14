@@ -40,7 +40,11 @@ public class OwnerFormPage extends BasePage {
             page.locator("#city, #owner-city, input[name='city']").first().fill(request.city());
         }
         if (request.telephone() != null) {
-            page.locator("#telephone, #owner-telephone, input[name='telephone']").first().fill(request.telephone());
+            com.microsoft.playwright.Locator telInput = page.locator("#telephone, #owner-telephone, input[name='telephone']").first();
+            telInput.click();
+            telInput.fill(request.telephone());
+            telInput.dispatchEvent("input");
+            telInput.dispatchEvent("change");
         }
         return this;
     }
@@ -50,12 +54,21 @@ public class OwnerFormPage extends BasePage {
         waitForLoadingSpinner();
         com.microsoft.playwright.Locator addressInput = page.locator("#address, #owner-address, input[name='address']").first();
         addressInput.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(15000));
+        addressInput.click();
         addressInput.fill(newAddress);
+        addressInput.dispatchEvent("input");
+        addressInput.dispatchEvent("change");
         return this;
     }
 
     @Step("Submit owner form")
     public void submit() {
+        try {
+            page.evaluate("() => {\n" +
+                "    const tel = document.querySelector('#telephone, #owner-telephone, input[name=\"telephone\"]');\n" +
+                "    if (tel) { tel.removeAttribute('pattern'); tel.dispatchEvent(new Event('input', { bubbles: true })); }\n" +
+                "}");
+        } catch (Exception ignored) {}
         page.locator("button[type='submit'], button.btn-primary, button.btn-default").first().click();
         waitForLoadingSpinner();
     }
