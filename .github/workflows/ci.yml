@@ -65,6 +65,11 @@ jobs:
         run: |
           mvn -B install -DskipTests -f test-framework/pom.xml
 
+      - name: Build application JARs
+        run: |
+          cd app
+          mvn -B clean package -DskipTests spring-boot:repackage
+
       - name: Stage 1 - Run Component Tests
         if: github.event_name != 'workflow_dispatch' || inputs.test_suite == 'all' || inputs.test_suite == 'component'
         run: |
