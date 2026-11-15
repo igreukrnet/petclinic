@@ -18,5 +18,9 @@ package org.springframework.samples.petclinic.api.dto;
 /**
  * @author Maciej Szarlinski
  */
-public record PetType(String name) {
+public record PetType(int id, String name) {
+    
+    public PetType(String name) {
+        this(0, name);
+    }
 }

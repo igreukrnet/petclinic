@@ -41,7 +41,53 @@ public class CustomersServiceClient {
             .onStatus(status -> !status.is2xxSuccessful(),
                 response -> response.bodyToMono(String.class)
                     .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch owner: " + error))))
-            .bodyToMono(OwnerResponse.class)
-            .map(OwnerResponse::toOwnerDetails);
+            .bodyToMono(java.util.Map.class)
+            .map(this::convertMapToOwnerDetails);
+    }
+
+    private OwnerDetails convertMapToOwnerDetails(java.util.Map<String, Object> ownerMap) {
+        try {
+            int id = ((Number) ownerMap.get("id")).intValue();
+            String firstName = (String) ownerMap.get("firstName");
+            String lastName = (String) ownerMap.get("lastName");
+            String address = (String) ownerMap.get("address");
+            String city = (String) ownerMap.get("city");
+            String telephone = (String) ownerMap.get("telephone");
+            
+            java.util.List<PetDetails> pets = new java.util.ArrayList<>();
+            Object petsObj = ownerMap.get("pets");
+            if (petsObj instanceof java.util.Collection) {
+                java.util.Collection<?> petsCollection = (java.util.Collection<?>) petsObj;
+                for (Object petObj : petsCollection) {
+                    if (petObj instanceof java.util.Map) {
+                        java.util.Map<String, Object> petMap = (java.util.Map<String, Object>) petObj;
+                        PetDetails pet = convertMapToPetDetails(petMap);
+                        pets.add(pet);
+                    }
+                }
+            }
+            
+            return new OwnerDetails(id, firstName, lastName, address, city, telephone, pets);
+        } catch (Exception e) {
+            throw new RuntimeException("Error converting owner map to OwnerDetails", e);
+        }
+    }
+
+    private PetDetails convertMapToPetDetails(java.util.Map<String, Object> petMap) {
+        int id = ((Number) petMap.get("id")).intValue();
+        String name = (String) petMap.get("name");
+        String birthDate = (String) petMap.get("birthDate");
+        
+        PetType type = null;
+        Object typeObj = petMap.get("type");
+        if (typeObj instanceof java.util.Map) {
+            java.util.Map<String, Object> typeMap = (java.util.Map<String, Object>) typeObj;
+            type = new PetType(
+                ((Number) typeMap.get("id")).intValue(),
+                (String) typeMap.get("name")
+            );
+        }
+        
+        return new PetDetails(id, name, birthDate, type, new java.util.ArrayList<>());
     }
 }
