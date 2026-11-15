@@ -25,13 +25,17 @@ public class OwnersPage extends BasePage {
         } catch (Exception ignored) {
             // Table might be empty; still try to search
         }
-        // The owners list loads from API when the page opens; wait for it
         Locator queryInput = page.locator("#owner-query, input[name='query'], input[placeholder*='Search'], input[type='search']").first();
         queryInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
         queryInput.click();
         queryInput.fill(query);
-        // Search is client-side (Vue reactive v-model) — no submit needed.
-        // Give Vue one tick to filter the list.
+        page.evaluate("val => {\n" +
+            "    const el = document.querySelector('#owner-query');\n" +
+            "    if (el) {\n" +
+            "        el.value = val;\n" +
+            "        el.dispatchEvent(new Event('input', { bubbles: true }));\n" +
+            "    }\n" +
+            "}", query);
         try { Thread.sleep(500); } catch (InterruptedException ignored) {}
         waitForLoadingSpinner();
         return this;
@@ -40,23 +44,25 @@ public class OwnersPage extends BasePage {
     @Step("Check if owner '{fullName}' is present in table")
     public boolean isOwnerPresent(String fullName) {
         waitForLoadingSpinner();
-        try {
-            // Try exact full name link first
-            Locator link = page.locator("table tbody tr td a:has-text('" + fullName + "')").first();
-            link.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
-            return true;
-        } catch (Exception e) {
-            // Fall back: match by last name only (split on space)
+        for (int attempt = 0; attempt < 5; attempt++) {
             try {
+                // Try exact full name link first
+                Locator link = page.locator("table tbody tr td a:has-text('" + fullName + "')").first();
+                if (link.count() > 0 && link.isVisible()) {
+                    return true;
+                }
+                // Fall back: match by last name only
                 String[] parts = fullName.split(" ", 2);
                 String lastName = parts.length > 1 ? parts[1] : fullName;
-                Locator link = page.locator("table tbody tr td a:has-text('" + lastName + "')").first();
-                link.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(3000));
-                return true;
-            } catch (Exception ex) {
-                return false;
-            }
+                Locator lastLink = page.locator("table tbody tr td a:has-text('" + lastName + "')").first();
+                if (lastLink.count() > 0 && lastLink.isVisible()) {
+                    return true;
+                }
+            } catch (Exception ignored) {}
+
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
         }
+        return false;
     }
 
     @Step("Click on owner details: {fullName}")

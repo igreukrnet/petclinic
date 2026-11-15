@@ -32,11 +32,7 @@ public class VisitsPage extends BasePage {
 
     @Step("Submit visit form")
     public void submit() {
-        page.locator("button[type='submit'], button.btn-primary, button.btn-default").first().click();
-        try {
-            String currentUrl = page.url();
-            page.waitForURL(url -> !url.equals(currentUrl), new Page.WaitForURLOptions().setTimeout(10000));
-        } catch (Exception ignored) {}
+        page.locator("form button[type='submit'], button.btn-primary, button.btn-default").first().click();
         waitForLoadingSpinner();
     }
 }
