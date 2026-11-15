@@ -19,15 +19,20 @@ public class OwnersPage extends BasePage {
     @Step("Search owners by query: {query}")
     public OwnersPage search(String query) {
         waitForLoadingSpinner();
-        Locator queryInput = page.locator("input[placeholder*='Search'], #owner-query, input[name='query'], input[type='search'], input[ng-model*='query']").first();
-        if (queryInput.count() == 0) {
-            navigate("/owners");
-            queryInput = page.locator("input[placeholder*='Search'], #owner-query, input[name='query'], input[type='search'], input[ng-model*='query']").first();
+        // Wait for the table to appear — API data loaded
+        try {
+            page.locator("table tbody tr").first().waitFor(new Locator.WaitForOptions().setTimeout(10000));
+        } catch (Exception ignored) {
+            // Table might be empty; still try to search
         }
+        // The owners list loads from API when the page opens; wait for it
+        Locator queryInput = page.locator("#owner-query, input[name='query'], input[placeholder*='Search'], input[type='search']").first();
         queryInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
         queryInput.click();
         queryInput.fill(query);
-        queryInput.press("Enter");
+        // Search is client-side (Vue reactive v-model) — no submit needed.
+        // Give Vue one tick to filter the list.
+        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
         waitForLoadingSpinner();
         return this;
     }
@@ -36,18 +41,21 @@ public class OwnersPage extends BasePage {
     public boolean isOwnerPresent(String fullName) {
         waitForLoadingSpinner();
         try {
+            // Try exact full name link first
             Locator link = page.locator("table tbody tr td a:has-text('" + fullName + "')").first();
-            if (link.count() == 0) {
-                // Try matching by first name or last name
-                String[] parts = fullName.split(" ");
-                if (parts.length > 1) {
-                    link = page.locator("table tbody tr td a:has-text('" + parts[1] + "')").first();
-                }
-            }
-            link.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(10000));
+            link.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
             return true;
         } catch (Exception e) {
-            return false;
+            // Fall back: match by last name only (split on space)
+            try {
+                String[] parts = fullName.split(" ", 2);
+                String lastName = parts.length > 1 ? parts[1] : fullName;
+                Locator link = page.locator("table tbody tr td a:has-text('" + lastName + "')").first();
+                link.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(3000));
+                return true;
+            } catch (Exception ex) {
+                return false;
+            }
         }
     }
 
