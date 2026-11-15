@@ -94,7 +94,18 @@ public class CustomersServiceClient {
     private PetDetails convertMapToPetDetails(java.util.Map<String, Object> petMap) {
         int id = ((Number) petMap.get("id")).intValue();
         String name = (String) petMap.get("name");
-        String birthDate = (String) petMap.get("birthDate");
+        
+        // Handle birthDate - it may come as String, Number (timestamp), or formatted date
+        String birthDate = null;
+        Object birthDateObj = petMap.get("birthDate");
+        if (birthDateObj instanceof String) {
+            birthDate = (String) birthDateObj;
+        } else if (birthDateObj instanceof Number) {
+            // Convert timestamp to date string
+            long timestamp = ((Number) birthDateObj).longValue();
+            java.time.Instant instant = java.time.Instant.ofEpochMilli(timestamp);
+            birthDate = java.time.LocalDate.ofInstant(instant, java.time.ZoneId.systemDefault()).toString();
+        }
         
         PetType type = null;
         Object typeObj = petMap.get("type");
