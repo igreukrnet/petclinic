@@ -16,7 +16,8 @@
 package org.springframework.samples.petclinic.api.application;
 
 import org.springframework.samples.petclinic.api.dto.OwnerDetails;
-import org.springframework.samples.petclinic.api.dto.OwnerResponse;
+import org.springframework.samples.petclinic.api.dto.PetDetails;
+import org.springframework.samples.petclinic.api.dto.PetType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -40,9 +41,26 @@ public class CustomersServiceClient {
             .retrieve()
             .onStatus(status -> !status.is2xxSuccessful(),
                 response -> response.bodyToMono(String.class)
-                    .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch owner: " + error))))
-            .bodyToMono(java.util.Map.class)
-            .map(this::convertMapToOwnerDetails);
+                    .doOnNext(error -> System.err.println("ERROR from customers-service: " + error))
+                    .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch owner " + ownerId + ": " + error))))
+            .bodyToMono(String.class)
+            .doOnNext(body -> System.out.println("Received owner response: " + body))
+            .map(this::parseOwnerDetailsFromJson)
+            .onErrorResume(e -> {
+                System.err.println("Error parsing owner " + ownerId + ": " + e.getMessage());
+                e.printStackTrace();
+                return Mono.error(e);
+            });
+    }
+
+    private OwnerDetails parseOwnerDetailsFromJson(String json) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> ownerMap = mapper.readValue(json, java.util.Map.class);
+            return convertMapToOwnerDetails(ownerMap);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse owner JSON: " + json, e);
+        }
     }
 
     private OwnerDetails convertMapToOwnerDetails(java.util.Map<String, Object> ownerMap) {
