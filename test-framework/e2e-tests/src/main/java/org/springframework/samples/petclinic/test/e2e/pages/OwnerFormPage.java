@@ -122,17 +122,21 @@ public class OwnerFormPage extends BasePage {
         submitBtn.waitFor(new Locator.WaitForOptions().setTimeout(10000));
         submitBtn.click();
 
-        waitForLoadingSpinner();
+        // Crucial: Wait for Vue router to complete async submission & navigation:
+        // On new owner create -> navigates to /owners (heading: <h2>Owners</h2>)
+        // On owner edit -> navigates to /owners/details/:id (heading: <h2>Owner Information</h2>)
         try {
-            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(5000));
-        } catch (Exception ignored) {}
-
-        // Check if an error alert was rendered by the Vue error state
-        try {
+            page.locator("h2:has-text('Owners'), h2:has-text('Owner Information')")
+                .first()
+                .waitFor(new Locator.WaitForOptions().setTimeout(15000));
+        } catch (Exception e) {
             Locator alert = page.locator(".alert-danger");
             if (alert.count() > 0 && alert.first().isVisible()) {
-                org.slf4j.LoggerFactory.getLogger(OwnerFormPage.class).warn("Form error alert detected: {}", alert.first().textContent().trim());
+                throw new AssertionError("Owner form submit failed with error: " + alert.first().textContent().trim());
             }
-        } catch (Exception ignored) {}
+            throw e;
+        }
+
+        waitForLoadingSpinner();
     }
 }
