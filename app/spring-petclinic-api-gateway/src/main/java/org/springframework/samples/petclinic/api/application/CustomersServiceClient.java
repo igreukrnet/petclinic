@@ -16,8 +16,10 @@
 package org.springframework.samples.petclinic.api.application;
 
 import org.springframework.samples.petclinic.api.dto.OwnerDetails;
+import org.springframework.samples.petclinic.api.dto.OwnerResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Mono;
 
 /**
@@ -39,6 +41,7 @@ public class CustomersServiceClient {
             .onStatus(status -> !status.is2xxSuccessful(),
                 response -> response.bodyToMono(String.class)
                     .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch owner: " + error))))
-            .bodyToMono(OwnerDetails.class);
+            .bodyToMono(OwnerResponse.class)
+            .map(OwnerResponse::toOwnerDetails);
     }
 }
