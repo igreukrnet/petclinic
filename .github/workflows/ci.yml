@@ -1,10 +1,11 @@
-name: PetClinic Test Framework CI/CD
+name: PetClinic Test Framework CI/CD (Legacy)
+
+# This workflow is kept for backwards compatibility.
+# New runs use:
+# - fast-checks.yml: build & component tests on every push
+# - e2e-tests.yml: E2E tests on demand or schedule
 
 on:
-  push:
-    branches: [ main, master, feature/** ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       test_suite:
