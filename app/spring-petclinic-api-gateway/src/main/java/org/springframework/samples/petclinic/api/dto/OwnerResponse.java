@@ -15,12 +15,15 @@
  */
 package org.springframework.samples.petclinic.api.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Response DTO from customers-service
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record OwnerResponse(
     int id,
     String firstName,

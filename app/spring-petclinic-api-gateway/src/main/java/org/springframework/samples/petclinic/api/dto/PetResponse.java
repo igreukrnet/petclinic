@@ -15,17 +15,18 @@
  */
 package org.springframework.samples.petclinic.api.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * Pet response from customers-service
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record PetResponse(
     int id,
     String name,
-    @JsonProperty("birthDate")
     String birthDate,
     PetType type,
     List<VisitDetails> visits) {
