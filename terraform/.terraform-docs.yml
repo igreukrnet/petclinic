@@ -1,0 +1,95 @@
+version: ">= 0.14.0"
+
+formatter: markdown table
+
+content: |
+  # PetClinic QA Infrastructure
+
+  Terraform configuration for AWS infrastructure supporting PetClinic QA automation.
+
+  ## Architecture
+
+  - **S3 Bucket**: Stores Allure test reports and execution history
+  - **CloudFront**: Provides fast, secure HTTPS access to reports globally
+  - **IAM User**: GitHub Actions CI/CD with least-privilege permissions
+  - **Origin Access Control (OAC)**: Secures S3 bucket access via CloudFront
+
+  ## Prerequisites
+
+  - AWS Account with appropriate permissions
+  - Terraform >= 1.5.0
+  - AWS CLI configured with credentials
+
+  ## Usage
+
+  ```bash
+  # Initialize Terraform (one-time)
+  terraform init
+
+  # Plan infrastructure changes
+  terraform plan -out=tfplan
+
+  # Review the plan, then apply
+  terraform apply tfplan
+
+  # View outputs
+  terraform output
+  ```
+
+  ## GitHub Actions Integration
+
+  After applying Terraform:
+
+  1. Get the AWS credentials from outputs:
+     ```bash
+     terraform output aws_access_key_id
+     terraform output aws_secret_access_key
+     ```
+
+  2. Add to GitHub repository secrets:
+     - `AWS_ACCESS_KEY_ID`
+     - `AWS_SECRET_ACCESS_KEY`
+
+  3. Add to GitHub repository variables:
+     - `S3_BUCKET_NAME`
+     - `CLOUDFRONT_DISTRIBUTION_ID`
+     - `AWS_REGION`
+
+  ## Security
+
+  - S3 bucket has public access blocked
+  - All data encrypted at rest (AES256)
+  - IAM user follows least-privilege principle
+  - CloudFront enforces HTTPS only
+  - OAC ensures secure bucket access
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  ## Sensitive Values
+
+  ⚠️ **Warning**: AWS secret access key is marked as sensitive. 
+  Store it securely and never commit to version control.
+
+output_file: README.md
+
+sort:
+  enabled: true
+  by: name
+
+recursive:
+  enabled: true
+  path: .
+
+markdown:
+  indent: 2
+
+sections:
+  inputs: true
+  outputs: true
+  providers: false
+  requirements: false
+  resources: true
