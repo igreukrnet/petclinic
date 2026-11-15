@@ -22,13 +22,18 @@ blob-report/
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 *.tfvars
 *.tfvars.json
+terraform.tfvars.local
 crash.log
+crash.*.log
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+.terraformrc
+terraform.rc
 
 # Environment variables and secrets
 .env
