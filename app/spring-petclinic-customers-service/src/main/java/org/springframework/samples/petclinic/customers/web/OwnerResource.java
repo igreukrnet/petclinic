@@ -15,19 +15,26 @@
  */
 package org.springframework.samples.petclinic.customers.web;
 
-import io.micrometer.core.annotation.Timed;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.samples.petclinic.customers.web.mapper.OwnerEntityMapper;
 import org.springframework.samples.petclinic.customers.model.Owner;
 import org.springframework.samples.petclinic.customers.model.OwnerRepository;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.samples.petclinic.customers.web.mapper.OwnerEntityMapper;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Optional;
+import io.micrometer.core.annotation.Timed;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 
 /**
  * @author Juergen Hoeller
@@ -65,8 +72,9 @@ class OwnerResource {
      * Read single Owner
      */
     @GetMapping(value = "/{ownerId}")
-    public Optional<Owner> findOwner(@PathVariable("ownerId") @Min(1) int ownerId) {
-        return ownerRepository.findById(ownerId);
+    public Owner findOwner(@PathVariable("ownerId") @Min(1) int ownerId) {
+        return ownerRepository.findById(ownerId)
+            .orElseThrow(() -> new ResourceNotFoundException("Owner " + ownerId + " not found"));
     }
 
     /**
