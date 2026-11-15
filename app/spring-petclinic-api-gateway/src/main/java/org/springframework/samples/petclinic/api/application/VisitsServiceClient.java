@@ -15,14 +15,14 @@
  */
 package org.springframework.samples.petclinic.api.application;
 
+import java.util.List;
+import static java.util.stream.Collectors.joining;
+
 import org.springframework.samples.petclinic.api.dto.Visits;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-
-import static java.util.stream.Collectors.joining;
 
 /**
  * @author Maciej Szarlinski
@@ -44,6 +44,9 @@ public class VisitsServiceClient {
             .get()
             .uri(hostname + "pets/visits?petId={petId}", joinIds(petIds))
             .retrieve()
+            .onStatus(status -> !status.is2xxSuccessful(),
+                response -> response.bodyToMono(String.class)
+                    .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch visits: " + error))))
             .bodyToMono(Visits.class);
     }
 

@@ -36,6 +36,9 @@ public class CustomersServiceClient {
         return webClientBuilder.build().get()
             .uri("http://customers-service/owners/{ownerId}", ownerId)
             .retrieve()
+            .onStatus(status -> !status.is2xxSuccessful(),
+                response -> response.bodyToMono(String.class)
+                    .flatMap(error -> Mono.error(new RuntimeException("Failed to fetch owner: " + error))))
             .bodyToMono(OwnerDetails.class);
     }
 }
