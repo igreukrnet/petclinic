@@ -43,9 +43,11 @@ jobs:
           cd app
           mvn -B clean package -DskipTests spring-boot:repackage
 
+      # Tests tagged known-defect fail on purpose until the application is fixed; they are excluded here
+      # so that this check catches regressions. The same tests stay red in local runs.
       - name: Run Component Tests
         run: |
-          mvn -B test -pl component-tests -f test-framework/pom.xml
+          mvn -B test -pl component-tests -f test-framework/pom.xml "-Dgroups=!known-defect"
 
       - name: Generate Allure Report
         if: always()

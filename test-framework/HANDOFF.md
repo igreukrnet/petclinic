@@ -141,4 +141,4 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 
 ### Статус реализации (2026-11-16)
 
-Сделано: старый компонентный слой удалён, новый `BaseComponentTest` и `CustomersServiceComponentTest` (владельцы: seed, создание, чтение, `PUT`, негативные случаи; 13 запусков, все зелёные, около 2,5 мин). Осталось: питомцы, типы, `PUT` питомца, тесты `known-defect` (issues #5 и #3, зависимость от часового пояса с `TZ=Europe/Kyiv`), затем шлюз с WireMock и остальные сервисы.
+Сделано: старый компонентный слой удалён, новый `BaseComponentTest`, `CustomersServiceComponentTest` (владельцы, типы, питомцы, негативные случаи; 24 запуска) и `CustomersTimeZoneComponentTest` (`TZ=Europe/Kyiv`). Три теста `known-defect` красные намеренно: неизвестный `typeId` (issue #5), формат даты питомца и сдвиг даты по часовому поясу (issue #3). Тест формата зависит от нерешённого вопроса о контракте дат. Fast Checks исключает `known-defect` (`-Dgroups=!known-defect`), остальные 22 зелёные. Осталось: шлюз с WireMock и остальные сервисы.
