@@ -21,6 +21,10 @@ Update this file when an item is started, finished or dropped.
 
 ## Parked for later (CI and local run)
 
+- **Cache-Control for published reports (waiting for a yes).** Set `Cache-Control: no-cache` on `index.html` and
+  `*.json` during `aws s3 sync` in `e2e-tests.yml`, so browsers always revalidate the report. Reason: a browser
+  kept an old `builds/5` report that Ctrl+F5 did not clear. Verified that S3 and CloudFront serve the correct data.
+
 - **Switch Allure publishing from CloudFront to another host (GitHub Pages), if wanted.** Decided: every run
   publishes to CloudFront (scheduled and manual), with a link to the run's report in the job summary. Later we
   may switch to GitHub Pages. Both publish publicly, because the repository is public.

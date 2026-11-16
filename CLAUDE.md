@@ -107,14 +107,16 @@ Both base classes use `@TestInstance(PER_CLASS)` and register `AiFailureTriageEx
 - Only `customers-service` and `api-gateway` are built from source (`context: ./app`, `docker/Dockerfile`, with `ARTIFACT_NAME=.../target/<module>-4.0.1`). The `app` JARs must be built first. If you bump the app version in `app/pom.xml`, update the `ARTIFACT_NAME` values.
 - The other services (config, discovery, vets, visits) use pre-built `springcommunity/*` images. They are not built from the local source, so changes in those modules do not reach the E2E stack.
 - Services use the `docker,mysql` Spring profiles and MySQL at `mysql:3306`, with a 512 MB memory limit each.
+- `docker-compose.local-full.yml` adds the non-test services (admin, Zipkin, Prometheus, Grafana) to the test stack. Use both files for a full local run: `docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d --build`. GenAI is not included: it needs `OPENAI_API_KEY` (see `test-framework/BACKLOG.md`).
 
 ## CI (`.github/workflows`)
 
 - `fast-checks.yml` — on push and PR: installs `test-framework`, builds the app JARs, runs component tests.
-- `e2e-tests.yml` — manual (`workflow_dispatch`) or nightly at 02:00 UTC: starts docker-compose, runs the E2E tests, generates the Allure report and publishes it to S3 and CloudFront. The run history is restored from `s3://…/latest/history`, and every run is archived under `builds/<run_number>/`.
+- `e2e-tests.yml` — manual (`workflow_dispatch`) or nightly at 02:00 UTC: starts docker-compose, runs the E2E tests, generates the Allure report and publishes it on every run (scheduled runs always; manual runs when `publish_report` is true). The report goes to S3 and is served through CloudFront. The run history is restored from `s3://…/latest/history`, and every run is archived under `builds/<run_number>/`. The job summary links to this run's report (`builds/<run_number>/index.html`) and to `latest`.
+- The E2E workflow is red on purpose while the known defects exist (see "Known failing tests"). Do not hide it.
 - `ci.yml` — legacy combined workflow, kept only for backwards compatibility (manual dispatch).
 - `terraform.yml` (fmt, validate, tflint on `terraform/` changes) and `terraform-deploy.yml` (manual plan or apply).
-- S3/CloudFront publishing is skipped unless the secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` and the variables `S3_BUCKET_NAME`, `CLOUDFRONT_DISTRIBUTION_ID` and `AWS_REGION` (default `eu-north-1`) are set. `terraform output` produces these values; see `terraform/README.md`.
+- S3/CloudFront publishing is skipped unless the secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` and the variables `S3_BUCKET_NAME`, `CLOUDFRONT_DISTRIBUTION_ID`, `CLOUDFRONT_DOMAIN` and `AWS_REGION` (default `eu-north-1`) are set. `CLOUDFRONT_DOMAIN` is the distribution's domain (for example `d2cteh9u7mbf08.cloudfront.net`); the summary links are built from it, because the S3 bucket is private and its URLs return AccessDenied. `terraform output` produces the other values; see `terraform/README.md`.
 
 ## App architecture (`app/`)
 
