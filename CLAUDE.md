@@ -16,7 +16,13 @@ The Java versions differ: `app` builds with 17, `test-framework` with 21 (CI use
 
 ## Commands
 
-Run every Maven command from the repo root with `-f`, or `cd` into the matching directory first. CI uses plain `mvn`; `app/mvnw` is also available.
+Run every Maven command from the repo root with `-f`, or `cd` into the matching directory first. CI uses plain `mvn`. On developer machines `mvn` is not always on PATH. Then use `app/mvnw` from inside `app/`, because its `.mvn/` wrapper lives there and it fails from the repo root:
+
+```bash
+cd app && ./mvnw -B -f ../test-framework/pom.xml test -pl e2e-tests
+```
+
+`test-framework` needs JDK 21. Set `JAVA_HOME` explicitly, because the default JDK on some machines is 17.
 
 ```bash
 # 1. Build and install the framework modules (core must be installed before the other modules can use it)
@@ -49,7 +55,12 @@ cd app && ./mvnw test
 cd terraform && terraform fmt -check && terraform validate
 ```
 
-E2E stack: `docker compose -f docker-compose.test.yml up -d --wait`. After that, wait until the gateway answers 200 on `/api/customer/owners`, `/api/vet/vets` and `/api/visit/owners/1/pets/1/visits`. The healthchecks do not cover Eureka registration, so the CI workflows poll these URLs.
+E2E stack: `docker compose -f docker-compose.test.yml up -d --wait`. After that, wait until the gateway answers 200 on `/api/customer/owners`, `/api/vet/vets`, `/api/visit/owners/1/pets/1/visits` and `/api/gateway/owners/1`. The last URL depends on visits-service being registered in Eureka. Right after startup the gateway logs `No servers available for service: visits-service` and the aggregate returns owners without visits, so E2E runs started too early fail on the visit assertions. The healthchecks do not cover Eureka registration, so the CI workflows poll these URLs.
+
+Known startup and state issues:
+
+- `visits-service` (a prebuilt image) can crash on first start with `Failed to open the referenced table 'pets'`. Its `schema.sql` references the `pets` table that customers-service creates, and compose only waits for `service_started`. Fix: `docker compose -f docker-compose.test.yml up -d visits-service` after customers-service is healthy.
+- MySQL data lives in an anonymous volume and persists between runs. Tests delete their own rows only at the end of the test body, so a failed test leaves its rows behind. For a clean baseline run `docker compose -f docker-compose.test.yml down -v` first.
 
 ## Test-framework architecture
 
@@ -62,10 +73,20 @@ Three modules. `core` is the shared library; `component-tests` and `e2e-tests` d
   - `data.TestDataGenerator`: generates test data with Datafaker.
   - `config`: `ConfigurationManager` and `TestConfig` (Owner library). Defaults live in `core/src/main/resources/config.properties` (gateway `localhost:8080`, MySQL `localhost:3306`, user `root`, password `petclinic`). Override them with system properties or environment variables.
   - `ai`: `AiFailureTriageExtension` is a JUnit `TestWatcher`. When a test fails and `ai.triage.enabled=true`, it sends the failure to an OpenAI-compatible endpoint (`ai.base.url`, `ai.model`) through `AiTriageClient` and attaches the analysis to the Allure report. It is off by default.
-- **`component-tests`** — isolated tests. `BaseComponentTest` starts a single static Testcontainers `mysql:8.4.5` container with reuse enabled and loads `/db/init.sql` from the test resources. Downstream services are mocked with WireMock, for example `GatewayCircuitBreakerTest`.
+- **`component-tests`** — isolated tests. `BaseComponentTest` starts a single static Testcontainers `mysql:8.4.5` container with reuse enabled and loads `/db/init.sql` from the test resources. Downstream services are mocked with WireMock. There are no gateway resilience tests yet: the former `GatewayCircuitBreakerTest` only exercised WireMock itself and was removed. A real circuit-breaker test needs the gateway running against WireMock-backed downstreams.
 - **`e2e-tests`** — runs against the live docker-compose stack. `BaseE2ETest` sets up Playwright Chromium (`-Dheadless`, default `true`), a `PetClinicClient` and the DAOs, and attaches a full-page screenshot to Allure after every test. The Page Object Model is in `src/main/java/.../e2e/pages`. Tests are split into `api/`, `ui/` and `hybrid/`. Hybrid tests check consistency between the UI, the API and the DB.
 
 Both base classes use `@TestInstance(PER_CLASS)` and register `AiFailureTriageExtension`. The Surefire config in `test-framework/pom.xml` attaches the AspectJ weaver as a `-javaagent` (needed for Allure `@Step` aspects). It also sets `DOCKER_API_VERSION=1.44` for Testcontainers. New test modules should inherit this config from the parent pom.
+
+## Page Object rules
+
+- Do not make the UI look valid or reachable with JavaScript. Do not set `form.noValidate`, override `reportValidity`, remove `required` or `pattern`, force clicks with `setForce(true)`, hide overlays with `display:none`, or write `input.value` plus synthetic events. If a click or fill fails, that is an application defect. Report it and let the test fail.
+- Do not swallow exceptions in waits (`catch (Exception ignored)`). A failed wait must fail the test with its original message. The only accepted `catch` is one that rethrows with more context.
+- Use Playwright waits (`waitFor`, or `PlaywrightAssertions`), not `Thread.sleep`. The remaining `Thread.sleep` calls in `OwnersPage` and `OwnerDetailsPage` are known debt.
+
+## Known failing tests
+
+- `OwnerLifecycleUiE2ETest` fails on the Add Visit click. The floating `.chatbox` intercepts pointer events on the owner details page. Tracked in https://github.com/igreukrnet/petclinic/issues/1. Keep it failing until the application is fixed. Do not work around it in the test.
 
 ## docker-compose.test.yml specifics
 
