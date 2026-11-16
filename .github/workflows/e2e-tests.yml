@@ -147,9 +147,8 @@ jobs:
           retention-days: 30
 
       - name: Publish Allure Report to AWS S3 & CloudFront
-        # Publishing is manual-only for now. The nightly schedule runs the tests but does not publish.
-        # To re-enable scheduled publishing, see test-framework/BACKLOG.md.
-        if: always() && github.event_name == 'workflow_dispatch' && inputs.publish_report == true && env.CAN_PUBLISH == 'true'
+        # Every run publishes (scheduled runs always; manual runs when publish_report is true).
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_report == true) && env.CAN_PUBLISH == 'true'
         env:
           CAN_PUBLISH: ${{ secrets.AWS_ACCESS_KEY_ID != '' && vars.S3_BUCKET_NAME != '' }}
           AWS_REGION: ${{ vars.AWS_REGION || 'eu-north-1' }}
@@ -185,10 +184,19 @@ jobs:
             else
               REPORT_URL="https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/latest/index.html"
             fi
-            
+
+            # Permanent link to this run's archived report (latest is overwritten by every run).
+            if [ -n "$CF_DOMAIN" ]; then
+              BUILD_URL="https://${CF_DOMAIN}/builds/${{ github.run_number }}/index.html"
+            else
+              BUILD_URL="https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/builds/${{ github.run_number }}/index.html"
+            fi
+
             echo "### 📊 Allure Test Report" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "🚀 **Live Report URL:** [$REPORT_URL]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 **Report for this run:** [$BUILD_URL]($BUILD_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Latest run: [$REPORT_URL]($REPORT_URL)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
             echo "|---|---|" >> $GITHUB_STEP_SUMMARY
