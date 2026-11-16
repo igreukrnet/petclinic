@@ -1,0 +1,27 @@
+# Line endings
+# The repository stores LF for all text files. Git converts on checkout so that
+# Windows, macOS and Linux developers and tools see the same content in the index.
+* text=auto eol=lf
+
+# Windows command scripts must have CRLF to run reliably under cmd.exe
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Shell scripts and the Unix Maven wrapper must keep LF
+*.sh text eol=lf
+mvnw text eol=lf
+
+# Binary files: never normalize or diff as text
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
