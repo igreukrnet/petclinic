@@ -20,22 +20,16 @@ public class VisitsPage extends BasePage {
     @Step("Fill visit form: {request}")
     public VisitsPage fillForm(VisitRequest request) {
         waitForLoadingSpinner();
-        Locator dateInput = page.locator("#date, #visit-date, input[name='date']").first();
-        dateInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        if (request.date() != null) {
-            dateInput.fill(request.date());
-        }
-        if (request.description() != null) {
-            page.locator("#description, #visit-description, textarea[name='description'], input[name='description']").first()
-                .fill(request.description());
-        }
+        page.locator("#visit-date").fill(request.date());
+        page.locator("#visit-description").fill(request.description());
         return this;
     }
 
     @Step("Submit visit form")
     public void submit() {
-        page.locator("form button[type='submit'], button.btn-primary, button.btn-default").first().click();
-        page.locator("h2:has-text('Owner Information')").first()
+        page.locator(MAIN_FORM_SUBMIT).click();
+        // After saving, the app returns to the owner details page.
+        page.locator("h2:text-is('Owner Information')")
             .waitFor(new Locator.WaitForOptions().setTimeout(15000));
         waitForLoadingSpinner();
     }

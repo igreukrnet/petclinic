@@ -23,7 +23,6 @@ import org.springframework.samples.petclinic.test.e2e.pages.PetFormPage;
 import org.springframework.samples.petclinic.test.e2e.pages.VisitsPage;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,22 +41,19 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
         PetRequest petReq = TestDataGenerator.generatePetRequest(1); // cat
         VisitRequest visitReq = TestDataGenerator.generateVisitRequest();
 
-        String fullName = ownerReq.firstName() + " " + ownerReq.lastName();
+        // Step 2: Register owner via UI, then track the new row so it is removed even if a later step fails
+        new OwnerFormPage(page).openNew().fillForm(ownerReq).submit();
+        OwnerDto owner = ownerDao.findByTelephone(ownerReq.telephone())
+            .orElseThrow(() -> new AssertionError("Owner was not saved to the database: " + ownerReq.telephone()));
+        trackOwner(owner.id());
 
-        // Step 2: Register owner via UI
-        OwnerFormPage ownerFormPage = new OwnerFormPage(page).openNew();
-        ownerFormPage.fillForm(ownerReq).submit();
-
-        // Step 3: Find owner in Owners table (submit() already redirects to /owners)
-        OwnersPage ownersPage = new OwnersPage(page);
-        if (!page.url().contains("/owners") || page.locator("#owner-query").count() == 0) {
-            ownersPage.open();
-        }
-        ownersPage.search(ownerReq.lastName());
-        assertThat(ownersPage.isOwnerPresent(fullName)).isTrue();
+        // Step 3: Find the owner in the Owners table
+        OwnersPage ownersPage = new OwnersPage(page).open();
+        ownersPage.search(ownerReq.telephone());
+        assertThat(ownersPage.isOwnerPresent(ownerReq.telephone())).isTrue();
 
         // Step 4: Open owner details
-        OwnerDetailsPage detailsPage = ownersPage.clickOwner(fullName);
+        OwnerDetailsPage detailsPage = ownersPage.clickOwner(ownerReq.telephone());
         assertThat(detailsPage.getOwnerName()).contains(ownerReq.firstName(), ownerReq.lastName());
         assertThat(detailsPage.getAddress()).isEqualTo(ownerReq.address());
         assertThat(detailsPage.getCity()).isEqualTo(ownerReq.city());
@@ -77,17 +73,14 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
         // Step 8: Verify visit on owner details
         assertThat(detailsPage.hasVisitDescription(visitReq.description())).isTrue();
 
-        // Step 9: TRIPLE VERIFICATION: Direct SQL verification via JDBI
-        Optional<OwnerDto> dbOwner = ownerDao.findByTelephone(ownerReq.telephone());
-        assertThat(dbOwner).isPresent();
-        OwnerDto owner = dbOwner.get();
-        assertThat(owner.firstName()).isEqualTo(ownerReq.firstName());
-        assertThat(owner.lastName()).isEqualTo(ownerReq.lastName());
-        assertThat(owner.address()).isEqualTo(ownerReq.address());
-        assertThat(owner.city()).isEqualTo(ownerReq.city());
+        // Step 9: Direct SQL verification via JDBI
+        OwnerDto dbOwner = ownerDao.findByTelephone(ownerReq.telephone()).orElseThrow();
+        assertThat(dbOwner.firstName()).isEqualTo(ownerReq.firstName());
+        assertThat(dbOwner.lastName()).isEqualTo(ownerReq.lastName());
+        assertThat(dbOwner.address()).isEqualTo(ownerReq.address());
+        assertThat(dbOwner.city()).isEqualTo(ownerReq.city());
 
-        List<PetDto> dbPets = petDao.findByOwnerId(owner.id());
-        assertThat(dbPets).isNotEmpty();
+        List<PetDto> dbPets = petDao.findByOwnerId(dbOwner.id());
         PetDto matchedPet = dbPets.stream()
             .filter(p -> p.name().equals(petReq.name()))
             .findFirst()
@@ -95,12 +88,8 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
         assertThat(matchedPet.birthDate()).isEqualTo(petReq.birthDate());
 
         List<VisitDto> dbVisits = visitDao.findByPetId(matchedPet.id());
-        assertThat(dbVisits).isNotEmpty();
         assertThat(dbVisits)
             .extracting(VisitDto::description)
             .contains(visitReq.description());
-
-        // Cleanup
-        deleteOwnerCascade(owner.id());
     }
 }

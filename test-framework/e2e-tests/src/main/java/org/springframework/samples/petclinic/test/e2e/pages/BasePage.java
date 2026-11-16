@@ -11,6 +11,12 @@ import java.io.ByteArrayInputStream;
 
 public abstract class BasePage {
 
+    /**
+     * Submit button of the page's main form. The chat widget also has a form with a submit button,
+     * so it is excluded explicitly instead of relying on DOM order.
+     */
+    protected static final String MAIN_FORM_SUBMIT = "form:not(.chatbox-footer) button[type='submit']";
+
     protected final Page page;
     protected final String baseUrl;
 
@@ -24,8 +30,8 @@ public abstract class BasePage {
     }
 
     public void waitForLoadingSpinner() {
-        // Playwright's DETACHED wait resolves immediately if the spinner is already gone,
-        // so no exception handling is needed. A spinner stuck for 10s fails the test on purpose.
+        // DETACHED resolves immediately when the spinner is already gone.
+        // A spinner that stays for 10 s fails the test on purpose.
         Locator spinner = page.locator("loading-spinner, .spinner-border");
         if (spinner.count() > 0) {
             spinner.first().waitFor(new Locator.WaitForOptions()
@@ -40,62 +46,29 @@ public abstract class BasePage {
         Allure.addAttachment(name, "image/png", new ByteArrayInputStream(screenshot), ".png");
     }
 
+    /**
+     * Routes inside the SPA with the Vue router.
+     * <p>
+     * A full page load of a deep link does not work: the gateway answers
+     * {@code GET /owners/details/1} with 404 JSON, so only the root document is served.
+     * The router push below is the same code path as an in-app link click. It depends on Vue internals
+     * ({@code __vue_app__} on {@code #app}); if that changes, this method fails loudly instead of falling back.
+     */
     @Step("Navigate to: {path}")
     public void navigate(String path) {
-        String targetPath = (path == null || path.isEmpty() || path.equals("/")) ? "/" : (path.startsWith("/") ? path : "/" + path);
-        String currentUrl = page.url();
-
-        // If the browser is not yet on the app or on about:blank or error page, load root SPA first
-        if (currentUrl == null || !currentUrl.startsWith(baseUrl) || currentUrl.contains("error") || page.locator("#app").count() == 0) {
-            page.navigate(baseUrl + "/");
-            page.waitForSelector("#main-navbar, #app", new Page.WaitForSelectorOptions().setTimeout(25000));
-        }
-
-        if (targetPath.equals("/") || targetPath.equals("/welcome")) {
-            Locator homeLink = page.locator("a:has-text('Home'), a:has-text('HOME'), a[title*='home']").first();
-            if (homeLink.count() > 0) {
-                homeLink.click();
-            }
-        } else if (targetPath.equals("/owners/new")) {
-            Locator newOwnerLink = page.locator("a:has-text('Register owner'), a:has-text('REGISTER OWNER'), a[title*='register owner'], a[href*='owners/new']").first();
-            if (newOwnerLink.count() > 0) {
-                newOwnerLink.click();
-            } else {
-                navigateToSpaRoute(targetPath);
-            }
-        } else if (targetPath.equals("/owners")) {
-            Locator ownersLink = page.locator("a:has-text('Find owners'), a:has-text('FIND OWNERS'), a[title*='find owners'], a[href*='owners']").first();
-            if (ownersLink.count() > 0) {
-                ownersLink.click();
-            } else {
-                navigateToSpaRoute(targetPath);
-            }
-        } else if (targetPath.equals("/vets")) {
-            Locator vetsLink = page.locator("a:has-text('Veterinarians'), a:has-text('VETERINARIANS'), a[title*='veterinarians'], a[href*='vets']").first();
-            if (vetsLink.count() > 0) {
-                vetsLink.click();
-            } else {
-                navigateToSpaRoute(targetPath);
-            }
-        } else {
-            navigateToSpaRoute(targetPath);
-        }
-
+        String targetPath = (path == null || path.isEmpty()) ? "/" : (path.startsWith("/") ? path : "/" + path);
+        ensureAppLoaded();
+        page.evaluate(
+            "target => document.querySelector('#app').__vue_app__.config.globalProperties.$router.push(target)",
+            targetPath
+        );
         waitForLoadingSpinner();
     }
 
-    private void navigateToSpaRoute(String targetPath) {
-        try {
-            page.evaluate("target => {\n" +
-                "    const appEl = document.querySelector('#app');\n" +
-                "    if (appEl && appEl.__vue_app__ && appEl.__vue_app__.config && appEl.__vue_app__.config.globalProperties.$router) {\n" +
-                "        appEl.__vue_app__.config.globalProperties.$router.push(target);\n" +
-                "    } else {\n" +
-                "        window.location.hash = '!' + target;\n" +
-                "    }\n" +
-                "}", targetPath);
-        } catch (Exception e) {
-            page.navigate(baseUrl + targetPath);
+    private void ensureAppLoaded() {
+        if (!page.url().startsWith(baseUrl) || page.locator("#app").count() == 0) {
+            page.navigate(baseUrl + "/");
+            page.waitForSelector("#app", new Page.WaitForSelectorOptions().setTimeout(25000));
         }
     }
 }

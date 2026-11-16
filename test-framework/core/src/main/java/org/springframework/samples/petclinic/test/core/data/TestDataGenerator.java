@@ -45,8 +45,9 @@ public class TestDataGenerator {
     }
 
     public static PetRequest generatePetRequest() {
-        // Types 1..6: 1=cat, 2=dog, 3=lizard, 4=snake, 5=bird, 6=hamster
-        int typeId = FAKER.number().numberBetween(1, 6);
+        // Types 1..6: 1=cat, 2=dog, 3=lizard, 4=snake, 5=bird, 6=hamster.
+        // Datafaker's numberBetween excludes the upper bound, so 7 is needed to include hamster (6).
+        int typeId = FAKER.number().numberBetween(1, 7);
         return generatePetRequest(typeId);
     }
 

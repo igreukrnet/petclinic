@@ -42,6 +42,7 @@ public class PetClinicApiE2ETest extends BaseE2ETest {
         ownerResponse.then().statusCode(201);
         int ownerId = ownerResponse.jsonPath().getInt("id");
         assertThat(ownerId).isPositive();
+        trackOwner(ownerId);
 
         // Step 2: Add pet to owner
         PetRequest petReq = TestDataGenerator.generatePetRequest(2); // dog
@@ -89,8 +90,5 @@ public class PetClinicApiE2ETest extends BaseE2ETest {
         List<VetDto> apiVets = vetsResponse.jsonPath().getList(".", VetDto.class);
         List<VetDto> dbVets = vetDao.findAllWithSpecialties();
         assertThat(apiVets.size()).isEqualTo(dbVets.size());
-
-        // Cleanup
-        deleteOwnerCascade(ownerId);
     }
 }

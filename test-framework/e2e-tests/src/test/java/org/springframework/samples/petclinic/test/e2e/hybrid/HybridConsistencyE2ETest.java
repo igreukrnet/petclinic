@@ -36,15 +36,15 @@ public class HybridConsistencyE2ETest extends BaseE2ETest {
         Response createResponse = petClinicClient.createOwner(initialOwner);
         createResponse.then().statusCode(201);
         int ownerId = createResponse.jsonPath().getInt("id");
-        String fullName = initialOwner.firstName() + " " + initialOwner.lastName();
+        trackOwner(ownerId);
 
         // Step 2: UI verification on Owners page
         OwnersPage ownersPage = new OwnersPage(page).open();
-        ownersPage.search(initialOwner.lastName());
-        assertThat(ownersPage.isOwnerPresent(fullName)).isTrue();
+        ownersPage.search(initialOwner.telephone());
+        assertThat(ownersPage.isOwnerPresent(initialOwner.telephone())).isTrue();
 
         // Step 3: Open details and click Edit Owner
-        OwnerDetailsPage detailsPage = ownersPage.clickOwner(fullName);
+        OwnerDetailsPage detailsPage = ownersPage.clickOwner(initialOwner.telephone());
         assertThat(detailsPage.getAddress()).isEqualTo(initialOwner.address());
 
         OwnerFormPage editPage = detailsPage.clickEditOwner();
@@ -61,8 +61,5 @@ public class HybridConsistencyE2ETest extends BaseE2ETest {
         assertThat(dbOwner).isPresent();
         assertThat(dbOwner.get().address()).isEqualTo(updatedAddress);
         assertThat(dbOwner.get().telephone()).isEqualTo(initialOwner.telephone());
-
-        // Cleanup
-        deleteOwnerCascade(ownerId);
     }
 }

@@ -2,6 +2,8 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.TimeoutError;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import io.qameta.allure.Step;
 
 public class OwnersPage extends BasePage {
@@ -16,58 +18,51 @@ public class OwnersPage extends BasePage {
         return this;
     }
 
+    /**
+     * The search box filters on the client side across all owner fields, not only last name.
+     * Results are checked by the methods below, which wait for the filtered rows.
+     */
     @Step("Search owners by query: {query}")
     public OwnersPage search(String query) {
         waitForLoadingSpinner();
-        Locator queryInput = page.locator("#owner-query, input[name='query'], input[placeholder*='Search'], input[type='search']").first();
+        Locator queryInput = page.locator("#owner-query");
         queryInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        queryInput.click();
         queryInput.fill(query);
-        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-        waitForLoadingSpinner();
         return this;
     }
 
-    @Step("Check if owner '{fullName}' is present in table")
-    public boolean isOwnerPresent(String fullName) {
+    /**
+     * Owners are identified by telephone: it is unique in the test data, while names are not.
+     * Returns false only when the row does not appear within 5 s.
+     */
+    @Step("Check if owner with telephone '{telephone}' is listed")
+    public boolean isOwnerPresent(String telephone) {
         waitForLoadingSpinner();
-        for (int attempt = 0; attempt < 5; attempt++) {
-            try {
-                // Try exact full name link first
-                Locator link = page.locator("table tbody tr td a:has-text('" + fullName + "')").first();
-                if (link.count() > 0 && link.isVisible()) {
-                    return true;
-                }
-                // Fall back: match by last name only
-                String[] parts = fullName.split(" ", 2);
-                String lastName = parts.length > 1 ? parts[1] : fullName;
-                Locator lastLink = page.locator("table tbody tr td a:has-text('" + lastName + "')").first();
-                if (lastLink.count() > 0 && lastLink.isVisible()) {
-                    return true;
-                }
-            } catch (Exception ignored) {}
-
-            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        try {
+            ownerRow(telephone).waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(5000));
+            return true;
+        } catch (TimeoutError e) {
+            return false;
         }
-        return false;
     }
 
-    @Step("Click on owner details: {fullName}")
-    public OwnerDetailsPage clickOwner(String fullName) {
+    @Step("Click on owner with telephone: {telephone}")
+    public OwnerDetailsPage clickOwner(String telephone) {
         waitForLoadingSpinner();
-        Locator link = page.locator("table tbody tr td a:has-text('" + fullName + "')").first();
-        if (link.count() == 0) {
-            String[] parts = fullName.split(" ");
-            if (parts.length > 1) {
-                link = page.locator("table tbody tr td a:has-text('" + parts[1] + "')").first();
-            }
-        }
-        link.click();
+        ownerRow(telephone).locator("td a").first().click();
         waitForLoadingSpinner();
         return new OwnerDetailsPage(page);
     }
 
     public Locator getOwnersRows() {
         return page.locator("table tbody tr");
+    }
+
+    private Locator ownerRow(String telephone) {
+        return page.locator("table tbody tr")
+            .filter(new Locator.FilterOptions().setHasText(telephone))
+            .first();
     }
 }

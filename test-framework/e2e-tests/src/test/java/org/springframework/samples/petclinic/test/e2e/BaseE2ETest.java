@@ -26,6 +26,8 @@ import org.springframework.samples.petclinic.test.core.db.dao.VetDao;
 import org.springframework.samples.petclinic.test.core.db.dao.VisitDao;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(AiFailureTriageExtension.class)
@@ -44,6 +46,9 @@ public abstract class BaseE2ETest {
     protected PetDao petDao;
     protected VisitDao visitDao;
     protected VetDao vetDao;
+
+    /** Owners created by the current test. Deleted in {@link #deleteTrackedOwners()} even when the test fails. */
+    private final List<Integer> createdOwnerIds = new ArrayList<>();
 
     @BeforeAll
     void initSuite() {
@@ -69,7 +74,7 @@ public abstract class BaseE2ETest {
     }
 
     @AfterEach
-    void tearDown(TestInfo testInfo) {
+    void captureScreenshotAndClosePage(TestInfo testInfo) {
         try {
             if (page != null) {
                 byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
@@ -81,6 +86,7 @@ public abstract class BaseE2ETest {
                 );
             }
         } catch (Exception e) {
+            // Screenshot is diagnostics only; the test result must not depend on it.
             log.debug("Could not capture screenshot: {}", e.getMessage());
         } finally {
             if (page != null) {
@@ -89,6 +95,31 @@ public abstract class BaseE2ETest {
             if (context != null) {
                 context.close();
             }
+        }
+    }
+
+    /**
+     * Runs even when the test failed. Cleanup failures are reported as failures of the test:
+     * leftover data would break later tests, so they must not be swallowed.
+     */
+    @AfterEach
+    void deleteTrackedOwners() {
+        List<Integer> ids = List.copyOf(createdOwnerIds);
+        createdOwnerIds.clear();
+
+        List<RuntimeException> failures = new ArrayList<>();
+        for (int ownerId : ids) {
+            try {
+                deleteOwnerCascade(ownerId);
+            } catch (RuntimeException e) {
+                failures.add(e);
+            }
+        }
+        if (!failures.isEmpty()) {
+            IllegalStateException error = new IllegalStateException(
+                "Cleanup failed for owner ids " + ids + "; database may contain leftover rows");
+            failures.forEach(error::addSuppressed);
+            throw error;
         }
     }
 
@@ -102,16 +133,17 @@ public abstract class BaseE2ETest {
         }
     }
 
+    /** Registers an owner for deletion at the end of the current test. Call it right after the owner is created. */
+    protected void trackOwner(int ownerId) {
+        createdOwnerIds.add(ownerId);
+    }
+
+    /** Deletes an owner with its pets and visits, in FK order. Throws on failure. */
     protected void deleteOwnerCascade(int ownerId) {
-        try {
-            var pets = petDao.findByOwnerId(ownerId);
-            for (var pet : pets) {
-                visitDao.deleteByPetId(pet.id());
-            }
-            petDao.deleteByOwnerId(ownerId);
-            ownerDao.deleteById(ownerId);
-        } catch (Exception e) {
-            log.warn("Failed to delete owner cascade for ID {}: {}", ownerId, e.getMessage());
+        for (var pet : petDao.findByOwnerId(ownerId)) {
+            visitDao.deleteByPetId(pet.id());
         }
+        petDao.deleteByOwnerId(ownerId);
+        ownerDao.deleteById(ownerId);
     }
 }

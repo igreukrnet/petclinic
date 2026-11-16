@@ -26,7 +26,8 @@ public class VetsPage extends BasePage {
     public boolean hasVet(String fullName) {
         waitForLoadingSpinner();
         try {
-            page.locator("table tbody tr td:has-text('" + fullName + "')").waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
+            page.locator("table tbody tr td").filter(new Locator.FilterOptions().setHasText(fullName)).first()
+                .waitFor(new Locator.WaitForOptions().setTimeout(5000));
             return true;
         } catch (Exception e) {
             return false;

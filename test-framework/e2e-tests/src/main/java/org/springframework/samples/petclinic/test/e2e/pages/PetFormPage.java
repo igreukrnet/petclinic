@@ -20,25 +20,17 @@ public class PetFormPage extends BasePage {
     @Step("Fill pet form: {request}")
     public PetFormPage fillForm(PetRequest request) {
         waitForLoadingSpinner();
-        Locator nameInput = page.locator("#name, #pet-name, input[name='name']").first();
-        nameInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        if (request.name() != null) {
-            nameInput.fill(request.name());
-        }
-        if (request.birthDate() != null) {
-            page.locator("#birthDate, #pet-birth-date, input[name='birthDate']").first().fill(request.birthDate());
-        }
-        if (request.typeId() > 0) {
-            page.locator("#type, #pet-type, select[name='type']").first()
-                .selectOption(String.valueOf(request.typeId()));
-        }
+        page.locator("#pet-name").fill(request.name());
+        page.locator("#pet-birth-date").fill(request.birthDate());
+        page.locator("#pet-type").selectOption(String.valueOf(request.typeId()));
         return this;
     }
 
     @Step("Submit pet form")
     public void submit() {
-        page.locator("form button[type='submit'], button.btn-primary, button.btn-default").first().click();
-        page.locator("h2:has-text('Owner Information')").first()
+        page.locator(MAIN_FORM_SUBMIT).click();
+        // After saving, the app returns to the owner details page.
+        page.locator("h2:text-is('Owner Information')")
             .waitFor(new Locator.WaitForOptions().setTimeout(15000));
         waitForLoadingSpinner();
     }

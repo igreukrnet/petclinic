@@ -26,69 +26,46 @@ public class OwnerFormPage extends BasePage {
     @Step("Fill owner form: {request}")
     public OwnerFormPage fillForm(OwnerRequest request) {
         waitForLoadingSpinner();
-        Locator firstNameInput = page.locator("#owner-first-name, #firstName, input[name='firstName']").first();
-        firstNameInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        if (request.firstName() != null) {
-            firstNameInput.click();
-            firstNameInput.fill(request.firstName());
-        }
-        if (request.lastName() != null) {
-            Locator lastNameInput = page.locator("#owner-last-name, #lastName, input[name='lastName']").first();
-            lastNameInput.click();
-            lastNameInput.fill(request.lastName());
-        }
-        if (request.address() != null) {
-            Locator addressInput = page.locator("#owner-address, #address, input[name='address']").first();
-            addressInput.click();
-            addressInput.fill(request.address());
-        }
-        if (request.city() != null) {
-            Locator cityInput = page.locator("#owner-city, #city, input[name='city']").first();
-            cityInput.click();
-            cityInput.fill(request.city());
-        }
-        String digitsOnly = request.telephone() != null ? request.telephone().replaceAll("[^0-9]", "") : "";
-        if (!digitsOnly.isEmpty()) {
-            Locator telInput = page.locator("#owner-telephone, #telephone, input[name='telephone']").first();
-            telInput.click();
-            telInput.fill(digitsOnly);
+        fillIfNotNull("#owner-first-name", request.firstName());
+        fillIfNotNull("#owner-last-name", request.lastName());
+        fillIfNotNull("#owner-address", request.address());
+        fillIfNotNull("#owner-city", request.city());
+        if (request.telephone() != null) {
+            fillIfNotNull("#owner-telephone", request.telephone().replaceAll("[^0-9]", ""));
         }
         return this;
     }
 
-    @Step("Fill and update address to: {newAddress}")
+    @Step("Update address to: {newAddress}")
     public OwnerFormPage updateAddress(String newAddress) {
         waitForLoadingSpinner();
-        Locator addressInput = page.locator("#owner-address, #address, input[name='address']").first();
-        addressInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        addressInput.click();
-        addressInput.fill(newAddress);
+        fillIfNotNull("#owner-address", newAddress);
         return this;
     }
 
     @Step("Submit owner form")
     public void submit() {
         waitForLoadingSpinner();
+        page.locator(MAIN_FORM_SUBMIT).click();
 
-        Locator submitBtn = page.locator("form button[type='submit'], form button.btn-primary").first();
-        submitBtn.waitFor(new Locator.WaitForOptions().setTimeout(10000));
-        submitBtn.click();
-
-        // Crucial: Wait for Vue router to complete async submission & navigation:
-        // On new owner create -> navigates to /owners (heading: <h2>Owners</h2>)
-        // On owner edit -> navigates to /owners/details/:id (heading: <h2>Owner Information</h2>)
+        // Vue router navigates after the async submit:
+        // new owner -> /owners (<h2>Owners</h2>), edit -> /owners/details/:id (<h2>Owner Information</h2>).
+        Locator success = page.locator("h2:text-is('Owners'), h2:text-is('Owner Information')");
+        Locator alert = page.locator(".alert-danger");
         try {
-            page.locator("h2:has-text('Owners'), h2:has-text('Owner Information')")
-                .first()
-                .waitFor(new Locator.WaitForOptions().setTimeout(15000));
-        } catch (Exception e) {
-            Locator alert = page.locator(".alert-danger");
+            success.first().waitFor(new Locator.WaitForOptions().setTimeout(15000));
+        } catch (RuntimeException e) {
             if (alert.count() > 0 && alert.first().isVisible()) {
-                throw new AssertionError("Owner form submit failed with error: " + alert.first().textContent().trim());
+                throw new AssertionError("Owner form submit failed with error: " + alert.first().textContent().trim(), e);
             }
             throw e;
         }
-
         waitForLoadingSpinner();
+    }
+
+    private void fillIfNotNull(String selector, String value) {
+        if (value != null) {
+            page.locator(selector).fill(value);
+        }
     }
 }
