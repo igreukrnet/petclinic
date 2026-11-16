@@ -37,6 +37,7 @@ mvn -B test -pl component-tests -f test-framework/pom.xml
 # E2E tests (Playwright + REST Assured + JDBI; need the whole stack running, see below)
 mvn -B test -pl e2e-tests -f test-framework/pom.xml
 mvn -B test -pl e2e-tests -f test-framework/pom.xml -Dheadless=false   # visible browser
+mvn -B test -pl e2e-tests -f test-framework/pom.xml "-Dgroups=!known-defect"   # skip tests for confirmed app defects
 
 # One test class / one method
 mvn -B test -pl component-tests -f test-framework/pom.xml -Dtest=CustomersServiceComponentTest
@@ -87,6 +88,7 @@ Both base classes use `@TestInstance(PER_CLASS)` and register `AiFailureTriageEx
 ## Known failing tests
 
 - `OwnerLifecycleUiE2ETest` fails on the Add Visit click. The floating `.chatbox` intercepts pointer events on the owner details page. Tracked in https://github.com/igreukrnet/petclinic/issues/1. Keep it failing until the application is fixed. Do not work around it in the test.
+- `KnownDefectsE2ETest` (tag `known-defect`) fails on purpose. A visit to a missing pet gives 500 instead of 404 (issue #4), and a pet with an unknown type gives 500 instead of 400 (issue #5). Do not change the expected status to match the current behaviour.
 
 ## docker-compose.test.yml specifics
 

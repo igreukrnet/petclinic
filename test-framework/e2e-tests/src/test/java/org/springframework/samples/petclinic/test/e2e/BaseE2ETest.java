@@ -24,6 +24,9 @@ import org.springframework.samples.petclinic.test.core.db.dao.OwnerDao;
 import org.springframework.samples.petclinic.test.core.db.dao.PetDao;
 import org.springframework.samples.petclinic.test.core.db.dao.VetDao;
 import org.springframework.samples.petclinic.test.core.db.dao.VisitDao;
+import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
+import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
+import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -141,6 +144,23 @@ public abstract class BaseE2ETest {
     /** Registers an owner for deletion at the end of the current test. Call it right after the owner is created. */
     protected void trackOwner(int ownerId) {
         createdOwnerIds.add(ownerId);
+    }
+
+    /** Creates an owner through the API for test setup and tracks it for cleanup. Fails if the owner is not created. */
+    protected int createOwnerViaApi(OwnerRequest request) {
+        int ownerId = petClinicClient.createOwner(request).then().statusCode(201).extract().jsonPath().getInt("id");
+        trackOwner(ownerId);
+        return ownerId;
+    }
+
+    /** Adds a pet through the API for test setup. Fails if the pet is not created. */
+    protected int addPetViaApi(int ownerId, PetRequest request) {
+        return petClinicClient.addPet(ownerId, request).then().statusCode(201).extract().jsonPath().getInt("id");
+    }
+
+    /** Adds a visit through the API for test setup. Fails if the visit is not created. */
+    protected int addVisitViaApi(int ownerId, int petId, VisitRequest request) {
+        return petClinicClient.addVisit(ownerId, petId, request).then().statusCode(201).extract().jsonPath().getInt("id");
     }
 
     /** Deletes an owner with its pets and visits, in FK order. Throws on failure. */
