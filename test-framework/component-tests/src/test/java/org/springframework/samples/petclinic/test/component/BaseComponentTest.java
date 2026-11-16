@@ -54,12 +54,20 @@ public abstract class BaseComponentTest extends BaseServiceTest {
         return "UTC";
     }
 
+    /**
+     * Runs after MySQL is up and before the service starts. For services whose tables refer to tables of another
+     * service (visits refer to pets), load that other schema here from the application source files.
+     */
+    protected void prepareDatabase(Database db) {
+    }
+
     @BeforeAll
     void startServiceAndDatabase() {
         // MYSQL is already started by @Container.
+        database = Database.connect(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
+        prepareDatabase(database);
         serviceContainer = createServiceContainer();
         serviceContainer.start();
-        database = Database.connect(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
         service = specFor(serviceContainer, SERVICE_PORT);
     }
 

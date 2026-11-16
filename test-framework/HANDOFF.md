@@ -141,7 +141,7 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 
 ### Статус реализации (2026-11-16)
 
-Сделано: старый компонентный слой удалён, новый `BaseComponentTest`, `CustomersServiceComponentTest` (владельцы, типы, питомцы, негативные случаи; 24 запуска) и `CustomersTimeZoneComponentTest` (`TZ=Europe/Kyiv`). Три теста `known-defect` красные намеренно: неизвестный `typeId` (issue #5), формат даты питомца и сдвиг даты по часовому поясу (issue #3). Тест формата зависит от нерешённого вопроса о контракте дат. Fast Checks исключает `known-defect` (`-Dgroups=!known-defect`), остальные 22 зелёные. Осталось: vets-service и visits-service.
+Сделано: старый компонентный слой удалён, новый `BaseComponentTest`, `CustomersServiceComponentTest` (владельцы, типы, питомцы, негативные случаи; 24 запуска) и `CustomersTimeZoneComponentTest` (`TZ=Europe/Kyiv`). Три теста `known-defect` красные намеренно: неизвестный `typeId` (issue #5), формат даты питомца и сдвиг даты по часовому поясу (issue #3). Тест формата зависит от нерешённого вопроса о контракте дат. Fast Checks исключает `known-defect` (`-Dgroups=!known-defect`), остальные 22 зелёные. Осталось: vets и visits сделаны (см. ниже).
 
 ### Шлюз (2026-11-16)
 
@@ -150,3 +150,9 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 Дефекты шлюза (issues): #6 retry POST на 503, #7 500 проходит клиенту, #8 нет таймаута, #9 один breaker на все маршруты, #10 5xx не считается в breaker, #11 агрегат при недоступном customers даёт 500 вместо 503, #12 агрегат для отсутствующего владельца даёт 500 вместо 404, #13 агрегат скрывает недоступность visits пустым списком (теста нет: контракт маркера не определён, решает владелец API). Таймаут и разделение breaker проверяются сразу в виде ожиданий; ни одно из свойств в приложении для этого не заведено.
 
 Не проверено на полном стеке: #11 и #12 (воспроизведены только на заглушках).
+
+### vets-service и visits-service (2026-11-16)
+
+Сделано: `VetsServiceComponentTest` (3, зелёные), `BaseVisitsTest` (загружает `schema.sql` и `data.sql` customers-service из исходников приложения через хук `prepareDatabase`), `VisitsServiceComponentTest` (11: 10 зелёных, 1 `known-defect` issue #4), `VisitsTimeZoneComponentTest` (1, `known-defect`, issue #14: дата визита сдвигается на день назад при `TZ=Europe/Kyiv`). JAR-ы vets и visits собирает шаг «Build application JARs» в CI; локально их нужно собрать (`cd app && ./mvnw package -DskipTests spring-boot:repackage`).
+
+Не покрыто: пустое описание визита (ждёт решения, раздел 7), кэш `/vets` (`@Cacheable`, поведение не определено), genai-service.

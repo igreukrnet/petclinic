@@ -9,7 +9,7 @@ Update this file when an item is started, finished or dropped.
   run a real service in a container next to MySQL (Testcontainers, image built from the service JAR), call it over
   HTTP, and check the database through the `core` DAOs. Start with customers-service, which runs standalone
   (recipe and feasibility check in `HANDOFF.md`, section 10). Add a real gateway circuit-breaker test later, with
-  the gateway running against WireMock downstreams. Approach approved; the base class and owner tests of customers-service are done. Pets, pet types and `known-defect` tests are done too. The gateway (routing, fallback, retry, aggregate, circuit breaker) is done too. Next: vets-service and visits-service standalone. Detailed plan: `HANDOFF.md`, section 10.
+  the gateway running against WireMock downstreams. Approach approved; the base class and owner tests of customers-service are done. Pets, pet types and `known-defect` tests are done too. The gateway (routing, fallback, retry, aggregate, circuit breaker) is done too. vets-service and visits-service are done too (all four services have component tests). Detailed plan: `HANDOFF.md`, section 10.
 - **UI validation of forms and the Veterinarians page (plan item 24).**
   No UI test checks what happens when a form is submitted with invalid data. `VetsPage` exists but no test uses it.
 - **Decision needed: empty visit description.** The API accepts `description: ""` and returns 201.
@@ -38,6 +38,7 @@ Update this file when an item is started, finished or dropped.
 - #2 Owner and visit dates show one day early in timezones west of UTC (`utils/dates.js`).
 - #3 API returns pet birth dates as UTC date-times and visit dates as `yyyy-MM-dd`.
 - #6 to #13 Gateway: retry on POST, 500 passed through, no timeout, one shared breaker, 5xx not counted, aggregate returns 500 instead of 503 and 404, visits outage hidden. Tests: `GatewayComponentTest`, `GatewayCircuitBreakerComponentTest` (all `known-defect` except #13, which has no test).
+- #14 Visit dates shift one day back when the server time zone is east of UTC. Test: `VisitsTimeZoneComponentTest` (`known-defect`).
 - #4 Visit to a missing pet returns 500 instead of 404. Test: `KnownDefectsE2ETest`.
 - #5 Pet with an unknown type returns 500 and is not validated. Test: `KnownDefectsE2ETest`.
 
