@@ -1,78 +1,123 @@
 package org.springframework.samples.petclinic.test.component;
 
+import io.qameta.allure.restassured.AllureRestAssured;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.http.ContentType;
+import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.samples.petclinic.test.ai.AiFailureTriageExtension;
 import org.springframework.samples.petclinic.test.core.db.Database;
-import org.springframework.samples.petclinic.test.core.db.dao.OwnerDao;
-import org.springframework.samples.petclinic.test.core.db.dao.PetDao;
-import org.springframework.samples.petclinic.test.core.db.dao.VetDao;
-import org.springframework.samples.petclinic.test.core.db.dao.VisitDao;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
 
 /**
- * Starts MySQL in Testcontainers and applies {@code /db/init.sql}.
+ * Runs one real service (the JAR built from {@code app/}) in a container next to MySQL, in a shared network.
+ * Tests call the service over HTTP directly (no gateway, no Eureka, no config server) and check the database
+ * through the DAOs from {@code core}. The containers are started once per test class and are not reused,
+ * so every run starts from the seed data.
  * <p>
- * The container is shared by all subclasses (reuse is enabled) and is skipped with a clear message
- * when Docker is not available, instead of failing during class initialization.
+ * Subclasses name the service JAR and the readiness path. The JAR must be built first:
+ * {@code cd app && mvn -B clean package -DskipTests spring-boot:repackage}.
+ * Override the JAR location with {@code -Dservice.jar=...}.
  */
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(AiFailureTriageExtension.class)
 public abstract class BaseComponentTest {
 
-    private static final Logger log = LoggerFactory.getLogger(BaseComponentTest.class);
+    private static final String MYSQL_ALIAS = "mysql";
+    protected static final int SERVICE_PORT = 8081;
+
+    protected static final Network NETWORK = Network.newNetwork();
 
     @Container
     protected static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4.5")
         .withDatabaseName("petclinic")
         .withUsername("root")
         .withPassword("petclinic")
-        .withReuse(true);
+        .withNetwork(NETWORK)
+        .withNetworkAliases(MYSQL_ALIAS);
 
     protected Database database;
-    protected OwnerDao ownerDao;
-    protected PetDao petDao;
-    protected VisitDao visitDao;
-    protected VetDao vetDao;
+    protected RequestSpecification service;
+
+    private GenericContainer<?> serviceContainer;
+
+    /** Path to the service JAR; the default is relative to the module directory. */
+    protected abstract String defaultJarPath();
+
+    /** A path inside the service that answers 200 when the service is ready. */
+    protected abstract String readinessPath();
+
+    /** Time zone of the service JVM. UTC by default, as in the E2E stack. */
+    protected String timeZone() {
+        return "UTC";
+    }
 
     @BeforeAll
-    void initDatabase() throws IOException {
+    void startServiceAndDatabase() {
+        // MYSQL is already started by @Container.
+        serviceContainer = createServiceContainer();
+        serviceContainer.start();
         database = Database.connect(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
-        ownerDao = database.owners();
-        petDao = database.pets();
-        visitDao = database.visits();
-        vetDao = database.vets();
-        applyInitScript();
+        service = new RequestSpecBuilder()
+            .setBaseUri("http://" + serviceContainer.getHost())
+            .setPort(serviceContainer.getMappedPort(SERVICE_PORT))
+            .setContentType(ContentType.JSON)
+            .addFilter(new AllureRestAssured())
+            .build();
     }
 
     @AfterAll
-    void closeDatabase() {
+    void stopServiceAndDatabase() {
         if (database != null) {
             database.close();
         }
+        if (serviceContainer != null) {
+            serviceContainer.stop();
+        }
     }
 
-    private void applyInitScript() throws IOException {
-        try (InputStream is = getClass().getResourceAsStream("/db/init.sql")) {
-            if (is == null) {
-                throw new IllegalStateException("/db/init.sql not found on the test classpath");
-            }
-            String script = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-            try (var handle = database.jdbi().open()) {
-                handle.createScript(script).execute();
-                log.info("Database schema initialized from /db/init.sql");
-            }
+    private GenericContainer<?> createServiceContainer() {
+        Path jar = Path.of(System.getProperty("service.jar", defaultJarPath())).toAbsolutePath().normalize();
+        if (!Files.isRegularFile(jar)) {
+            throw new IllegalStateException("Service JAR not found: " + jar
+                + ". Build the application JARs first: cd app && mvn -B clean package -DskipTests spring-boot:repackage");
         }
+        ImageFromDockerfile image = new ImageFromDockerfile()
+            .withFileFromPath("application.jar", jar)
+            .withDockerfileFromBuilder(b -> b
+                .from("eclipse-temurin:17")
+                .copy("application.jar", "/application.jar")
+                .entryPoint("java", "-jar", "/application.jar")
+                .build());
+        return new GenericContainer<>(image)
+            .withNetwork(NETWORK)
+            .withExposedPorts(SERVICE_PORT)
+            .withEnv("SPRING_PROFILES_ACTIVE", "mysql")
+            .withEnv("SPRING_DATASOURCE_URL",
+                "jdbc:mysql://" + MYSQL_ALIAS + ":3306/petclinic?allowPublicKeyRetrieval=true&useSSL=false")
+            .withEnv("SPRING_DATASOURCE_USERNAME", MYSQL.getUsername())
+            .withEnv("SPRING_DATASOURCE_PASSWORD", MYSQL.getPassword())
+            .withEnv("SPRING_CLOUD_CONFIG_ENABLED", "false")
+            .withEnv("EUREKA_CLIENT_ENABLED", "false")
+            .withEnv("SPRING_SQL_INIT_MODE", "always")
+            .withEnv("SPRING_SQL_INIT_SCHEMA_LOCATIONS", "classpath:db/mysql/schema.sql")
+            .withEnv("SPRING_SQL_INIT_DATA_LOCATIONS", "classpath:db/mysql/data.sql")
+            .withEnv("SERVER_PORT", String.valueOf(SERVICE_PORT))
+            .withEnv("TZ", timeZone())
+            .waitingFor(Wait.forHttp(readinessPath()).forStatusCode(200).withStartupTimeout(Duration.ofMinutes(3)));
     }
 }
