@@ -5,6 +5,7 @@ import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.data.TestDataGenerator;
 import org.springframework.samples.petclinic.test.core.model.dto.OwnerDto;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Epic("E2E Tests")
 @Feature("Typed API client")
+@Tag("api")
 public class TypedClientE2ETest extends BaseE2ETest {
 
     @Test

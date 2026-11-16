@@ -16,13 +16,25 @@ The Java versions differ: `app` builds with 17, `test-framework` with 21 (CI use
 
 ## Commands
 
-Run every Maven command from the repo root with `-f`, or `cd` into the matching directory first. CI uses plain `mvn`. On developer machines `mvn` is not always on PATH. Then use `app/mvnw` from inside `app/`, because its `.mvn/` wrapper lives there and it fails from the repo root:
+Run every Maven command from the repo root with `-f`, or `cd` into the matching directory first. CI uses plain `mvn`.
+
+`test-framework` has its own Maven wrapper (Maven 3.9.8): `test-framework/mvnw` on Unix shells, `test-framework/mvnw.cmd` on Windows. Use it when `mvn` is not on PATH:
 
 ```bash
-cd app && ./mvnw -B -f ../test-framework/pom.xml test -pl e2e-tests
+cd test-framework && ./mvnw -B test -pl e2e-tests
 ```
 
-`test-framework` needs JDK 21. Set `JAVA_HOME` explicitly, because the default JDK on some machines is 17.
+`test-framework` needs JDK 21. The build stops at `validate` with a clear message if the JDK is not 21. Set `JAVA_HOME` explicitly, because the default JDK on some machines is 17.
+
+Run a subset with JUnit tags. Quote the property in PowerShell:
+
+```bash
+./mvnw -B test -pl e2e-tests -Dgroups=smoke        # the two main API and hybrid flows
+./mvnw -B test -pl e2e-tests -Dgroups=negative     # validation and error responses
+./mvnw -B test -pl e2e-tests "-Dgroups=!known-defect"   # everything except known application defects
+```
+
+Tags: `smoke`, `api`, `hybrid`, `ui`, `negative`, `known-defect`.
 
 ```bash
 # 1. Build and install the framework modules (core must be installed before the other modules can use it)

@@ -8,6 +8,7 @@ import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.data.TestDataGenerator;
 import org.springframework.samples.petclinic.test.core.model.dto.OwnerDto;
@@ -23,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Epic("E2E Tests")
 @Feature("Hybrid UI + API + SQL Consistency")
+@Tag("smoke")
+@Tag("hybrid")
 public class HybridConsistencyE2ETest extends BaseE2ETest {
 
     @Test

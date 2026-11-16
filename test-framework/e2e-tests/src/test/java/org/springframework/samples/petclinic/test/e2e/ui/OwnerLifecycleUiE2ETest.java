@@ -7,6 +7,7 @@ import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.data.TestDataGenerator;
 import org.springframework.samples.petclinic.test.core.model.dto.OwnerDto;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Epic("E2E Tests")
 @Feature("UI Owner & Pet Lifecycle")
+@Tag("ui")
 public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
 
     @Test

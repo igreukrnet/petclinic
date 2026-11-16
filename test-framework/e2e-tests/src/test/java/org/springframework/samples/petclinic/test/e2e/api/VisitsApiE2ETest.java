@@ -4,6 +4,7 @@ import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.data.TestDataGenerator;
 import org.springframework.samples.petclinic.test.core.model.dto.VisitDto;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Epic("E2E Tests")
 @Feature("Visits API")
+@Tag("api")
 public class VisitsApiE2ETest extends BaseE2ETest {
 
     @Test

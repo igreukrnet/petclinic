@@ -4,6 +4,7 @@ import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -20,6 +21,8 @@ import java.util.stream.Stream;
 
 @Epic("E2E Tests")
 @Feature("API validation and error responses")
+@Tag("negative")
+@Tag("api")
 public class ValidationApiE2ETest extends BaseE2ETest {
 
     static Stream<Arguments> invalidOwners() {
