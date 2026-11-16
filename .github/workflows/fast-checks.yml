@@ -46,3 +46,30 @@ jobs:
       - name: Run Component Tests
         run: |
           mvn -B test -pl component-tests -f test-framework/pom.xml
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          mvn -B allure:report -f test-framework/pom.xml
+
+      - name: Upload Allure Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: component-allure-results
+          path: |
+            target/allure-results
+            test-framework/target/allure-results
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Allure HTML Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: component-allure-report
+          path: |
+            target/site/allure-maven-plugin
+            test-framework/target/site/allure-maven-plugin
+          if-no-files-found: warn
+          retention-days: 14
