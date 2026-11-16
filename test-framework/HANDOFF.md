@@ -141,4 +141,12 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 
 ### Статус реализации (2026-11-16)
 
-Сделано: старый компонентный слой удалён, новый `BaseComponentTest`, `CustomersServiceComponentTest` (владельцы, типы, питомцы, негативные случаи; 24 запуска) и `CustomersTimeZoneComponentTest` (`TZ=Europe/Kyiv`). Три теста `known-defect` красные намеренно: неизвестный `typeId` (issue #5), формат даты питомца и сдвиг даты по часовому поясу (issue #3). Тест формата зависит от нерешённого вопроса о контракте дат. Fast Checks исключает `known-defect` (`-Dgroups=!known-defect`), остальные 22 зелёные. Осталось: шлюз с WireMock и остальные сервисы.
+Сделано: старый компонентный слой удалён, новый `BaseComponentTest`, `CustomersServiceComponentTest` (владельцы, типы, питомцы, негативные случаи; 24 запуска) и `CustomersTimeZoneComponentTest` (`TZ=Europe/Kyiv`). Три теста `known-defect` красные намеренно: неизвестный `typeId` (issue #5), формат даты питомца и сдвиг даты по часовому поясу (issue #3). Тест формата зависит от нерешённого вопроса о контракте дат. Fast Checks исключает `known-defect` (`-Dgroups=!known-defect`), остальные 22 зелёные. Осталось: vets-service и visits-service.
+
+### Шлюз (2026-11-16)
+
+Сделано: `BaseServiceTest` (общее), `BaseGatewayTest` (шлюз без Eureka и config-server через `SimpleDiscoveryClient`, WireMock в JVM на динамических портах), `GatewayComponentTest` (15 запусков: 10 зелёных, 5 `known-defect`) и `GatewayCircuitBreakerComponentTest` (4 запуска: 2 зелёных, 2 `known-defect`). Брейкер в тестах сжат свойствами `resilience4j.circuitbreaker.*` (окно 4, пауза 5 с), остальное по умолчанию. Внешний config-репозиторий (`api-gateway.yml`, `application.yml`) не задаёт ни таймаутов, ни resilience4j, ни retry, поэтому шлюз в тесте ведёт себя как в боевом стеке.
+
+Дефекты шлюза (issues): #6 retry POST на 503, #7 500 проходит клиенту, #8 нет таймаута, #9 один breaker на все маршруты, #10 5xx не считается в breaker, #11 агрегат при недоступном customers даёт 500 вместо 503, #12 агрегат для отсутствующего владельца даёт 500 вместо 404, #13 агрегат скрывает недоступность visits пустым списком (теста нет: контракт маркера не определён, решает владелец API). Таймаут и разделение breaker проверяются сразу в виде ожиданий; ни одно из свойств в приложении для этого не заведено.
+
+Не проверено на полном стеке: #11 и #12 (воспроизведены только на заглушках).

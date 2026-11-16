@@ -1,14 +1,8 @@
 package org.springframework.samples.petclinic.test.component;
 
-import io.qameta.allure.restassured.AllureRestAssured;
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.samples.petclinic.test.ai.AiFailureTriageExtension;
 import org.springframework.samples.petclinic.test.core.db.Database;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -16,10 +10,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 
 /**
@@ -32,10 +23,7 @@ import java.time.Duration;
  * {@code cd app && mvn -B clean package -DskipTests spring-boot:repackage}.
  * Override the JAR location with {@code -Dservice.jar=...}.
  */
-@Testcontainers(disabledWithoutDocker = true)
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(AiFailureTriageExtension.class)
-public abstract class BaseComponentTest {
+public abstract class BaseComponentTest extends BaseServiceTest {
 
     private static final String MYSQL_ALIAS = "mysql";
     protected static final int SERVICE_PORT = 8081;
@@ -72,12 +60,7 @@ public abstract class BaseComponentTest {
         serviceContainer = createServiceContainer();
         serviceContainer.start();
         database = Database.connect(MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
-        service = new RequestSpecBuilder()
-            .setBaseUri("http://" + serviceContainer.getHost())
-            .setPort(serviceContainer.getMappedPort(SERVICE_PORT))
-            .setContentType(ContentType.JSON)
-            .addFilter(new AllureRestAssured())
-            .build();
+        service = specFor(serviceContainer, SERVICE_PORT);
     }
 
     @AfterAll
@@ -91,18 +74,7 @@ public abstract class BaseComponentTest {
     }
 
     private GenericContainer<?> createServiceContainer() {
-        Path jar = Path.of(System.getProperty("service.jar", defaultJarPath())).toAbsolutePath().normalize();
-        if (!Files.isRegularFile(jar)) {
-            throw new IllegalStateException("Service JAR not found: " + jar
-                + ". Build the application JARs first: cd app && mvn -B clean package -DskipTests spring-boot:repackage");
-        }
-        ImageFromDockerfile image = new ImageFromDockerfile()
-            .withFileFromPath("application.jar", jar)
-            .withDockerfileFromBuilder(b -> b
-                .from("eclipse-temurin:17")
-                .copy("application.jar", "/application.jar")
-                .entryPoint("java", "-jar", "/application.jar")
-                .build());
+        ImageFromDockerfile image = imageFor(resolveJar(defaultJarPath()));
         return new GenericContainer<>(image)
             .withNetwork(NETWORK)
             .withExposedPorts(SERVICE_PORT)
