@@ -96,8 +96,7 @@ public class OwnerDetailsPage extends BasePage {
 
     @Step("Click 'Add Visit' for pet")
     public VisitsPage clickAddVisit() {
-        hideOverlays();
-        page.locator("a:has-text('Add Visit')").first().click(new com.microsoft.playwright.Locator.ClickOptions().setForce(true));
+        page.locator("a:has-text('Add Visit')").first().click();
         waitForLoadingSpinner();
         return new VisitsPage(page);
     }

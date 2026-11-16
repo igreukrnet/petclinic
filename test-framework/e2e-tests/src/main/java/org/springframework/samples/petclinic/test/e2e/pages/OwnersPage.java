@@ -19,23 +19,10 @@ public class OwnersPage extends BasePage {
     @Step("Search owners by query: {query}")
     public OwnersPage search(String query) {
         waitForLoadingSpinner();
-        // Wait for the table to appear — API data loaded
-        try {
-            page.locator("table tbody tr").first().waitFor(new Locator.WaitForOptions().setTimeout(10000));
-        } catch (Exception ignored) {
-            // Table might be empty; still try to search
-        }
         Locator queryInput = page.locator("#owner-query, input[name='query'], input[placeholder*='Search'], input[type='search']").first();
         queryInput.waitFor(new Locator.WaitForOptions().setTimeout(15000));
         queryInput.click();
         queryInput.fill(query);
-        page.evaluate("val => {\n" +
-            "    const el = document.querySelector('#owner-query');\n" +
-            "    if (el) {\n" +
-            "        el.value = val;\n" +
-            "        el.dispatchEvent(new Event('input', { bubbles: true }));\n" +
-            "    }\n" +
-            "}", query);
         try { Thread.sleep(500); } catch (InterruptedException ignored) {}
         waitForLoadingSpinner();
         return this;

@@ -24,15 +24,13 @@ public abstract class BasePage {
     }
 
     public void waitForLoadingSpinner() {
-        try {
-            Locator spinner = page.locator("loading-spinner, .spinner-border");
-            if (spinner.count() > 0) {
-                spinner.first().waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.DETACHED)
-                    .setTimeout(10000));
-            }
-        } catch (Exception ignored) {
-            // Spinner might have already detached
+        // Playwright's DETACHED wait resolves immediately if the spinner is already gone,
+        // so no exception handling is needed. A spinner stuck for 10s fails the test on purpose.
+        Locator spinner = page.locator("loading-spinner, .spinner-border");
+        if (spinner.count() > 0) {
+            spinner.first().waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.DETACHED)
+                .setTimeout(10000));
         }
     }
 
@@ -84,7 +82,6 @@ public abstract class BasePage {
         }
 
         waitForLoadingSpinner();
-        hideOverlays();
     }
 
     private void navigateToSpaRoute(String targetPath) {
@@ -99,13 +96,6 @@ public abstract class BasePage {
                 "}", targetPath);
         } catch (Exception e) {
             page.navigate(baseUrl + targetPath);
-        }
-    }
-
-    public void hideOverlays() {
-        try {
-            page.evaluate("() => document.querySelectorAll('.chatbox, #chatbox').forEach(el => el.style.display = 'none')");
-        } catch (Exception ignored) {
         }
     }
 }
