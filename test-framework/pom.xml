@@ -14,6 +14,7 @@
 
     <modules>
         <module>core</module>
+        <module>ai-triage</module>
         <module>component-tests</module>
         <module>e2e-tests</module>
     </modules>
@@ -91,6 +92,11 @@
             <dependency>
                 <groupId>org.springframework.samples.petclinic.test</groupId>
                 <artifactId>core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.samples.petclinic.test</groupId>
+                <artifactId>ai-triage</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

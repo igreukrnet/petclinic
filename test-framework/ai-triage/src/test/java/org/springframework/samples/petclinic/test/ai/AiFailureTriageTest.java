@@ -1,14 +1,14 @@
-package org.springframework.samples.petclinic.test.core.ai;
+package org.springframework.samples.petclinic.test.ai;
 
 import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
+import org.aeonbits.owner.ConfigFactory;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +22,7 @@ public class AiFailureTriageTest {
     @Description("Sends simulated failed test stacktrace and metadata to the AI endpoint and validates diagnosis")
     void shouldGenerateStructuredTriageAnalysisForSimulatedFailure() {
         Assumptions.assumeTrue(
-            ConfigurationManager.getConfig().aiTriageEnabled(),
+            ConfigFactory.create(AiTriageConfig.class).aiTriageEnabled(),
             "AI Failure Triage is disabled in config (ai.triage.enabled=false). Skipping live AI integration test."
         );
 

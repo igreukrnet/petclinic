@@ -6,7 +6,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.samples.petclinic.test.core.ai.AiFailureTriageExtension;
+import org.springframework.samples.petclinic.test.ai.AiFailureTriageExtension;
 import org.springframework.samples.petclinic.test.core.db.Database;
 import org.springframework.samples.petclinic.test.core.db.dao.OwnerDao;
 import org.springframework.samples.petclinic.test.core.db.dao.PetDao;

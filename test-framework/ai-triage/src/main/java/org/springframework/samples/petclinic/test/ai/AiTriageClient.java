@@ -1,11 +1,10 @@
-package org.springframework.samples.petclinic.test.core.ai;
+package org.springframework.samples.petclinic.test.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
-import org.springframework.samples.petclinic.test.core.config.TestConfig;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,10 +20,10 @@ public class AiTriageClient {
     private static final Logger log = LoggerFactory.getLogger(AiTriageClient.class);
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
-    private final TestConfig config;
+    private final AiTriageConfig config;
 
     public AiTriageClient() {
-        this.config = ConfigurationManager.getConfig();
+        this.config = ConfigFactory.create(AiTriageConfig.class);
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();

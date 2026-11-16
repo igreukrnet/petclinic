@@ -1,20 +1,21 @@
-package org.springframework.samples.petclinic.test.core.ai;
+package org.springframework.samples.petclinic.test.ai;
 
 import io.qameta.allure.Allure;
+import org.aeonbits.owner.ConfigFactory;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
 
 public class AiFailureTriageExtension implements TestWatcher {
 
     private static final Logger log = LoggerFactory.getLogger(AiFailureTriageExtension.class);
+    private final AiTriageConfig config = ConfigFactory.create(AiTriageConfig.class);
     private final AiTriageClient aiTriageClient = new AiTriageClient();
 
     @Override
     public void testFailed(ExtensionContext context, Throwable cause) {
-        if (!ConfigurationManager.getConfig().aiTriageEnabled()) {
+        if (!config.aiTriageEnabled()) {
             log.debug("AI Failure Triage is disabled (ai.triage.enabled=false)");
             return;
         }

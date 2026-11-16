@@ -60,11 +60,11 @@ E2E stack: `docker compose -f docker-compose.test.yml up -d --wait`. After that,
 Known startup and state issues:
 
 - `visits-service` (a prebuilt image) can crash on first start with `Failed to open the referenced table 'pets'`. Its `schema.sql` references the `pets` table that customers-service creates, and compose only waits for `service_started`. Fix: `docker compose -f docker-compose.test.yml up -d visits-service` after customers-service is healthy.
-- MySQL data lives in an anonymous volume and persists between runs. Tests delete their own rows only at the end of the test body, so a failed test leaves its rows behind. For a clean baseline run `docker compose -f docker-compose.test.yml down -v` first.
+- MySQL data lives in an anonymous volume and persists between runs. Tests register the owners they create with `trackOwner(...)`, and an `@AfterEach` deletes them even after a failure. A run killed by a signal can still leave rows behind. For a clean baseline run `docker compose -f docker-compose.test.yml down -v` first.
 
 ## Test-framework architecture
 
-Three modules. `core` is the shared library; `component-tests` and `e2e-tests` depend on it.
+Four modules. `core` is the shared library. `ai-triage` is optional and registered by both test modules. `component-tests` and `e2e-tests` depend on `core`.
 
 - **`core`** (`org.springframework.samples.petclinic.test.core`)
   - `api`: `ApiClient` and `PetClinicClient`, REST Assured clients that call the gateway.
@@ -72,7 +72,7 @@ Three modules. `core` is the shared library; `component-tests` and `e2e-tests` d
   - `model.dto` and `model.request`: the DTOs and request bodies the tests use.
   - `data.TestDataGenerator`: generates test data with Datafaker.
   - `config`: `ConfigurationManager` and `TestConfig` (Owner library). Defaults live in `core/src/main/resources/config.properties` (gateway `localhost:8080`, MySQL `localhost:3306`, user `root`, password `petclinic`). Override them with system properties or environment variables.
-  - `ai`: `AiFailureTriageExtension` is a JUnit `TestWatcher`. When a test fails and `ai.triage.enabled=true`, it sends the failure to an OpenAI-compatible endpoint (`ai.base.url`, `ai.model`) through `AiTriageClient` and attaches the analysis to the Allure report. It is off by default.
+- **`ai-triage`** (`org.springframework.samples.petclinic.test.ai`) — optional. `AiFailureTriageExtension` is a JUnit `TestWatcher`. When a test fails and `ai.triage.enabled=true`, it sends the failure to an OpenAI-compatible endpoint through `AiTriageClient` and attaches the analysis to the Allure report. Settings are in `ai-triage.properties` (`ai.base.url`, `ai.model`, `ai.api.key`). It is off by default.
 - **`component-tests`** — isolated tests. `BaseComponentTest` starts a single static Testcontainers `mysql:8.4.5` container with reuse enabled and loads `/db/init.sql` from the test resources. Downstream services are mocked with WireMock. There are no gateway resilience tests yet: the former `GatewayCircuitBreakerTest` only exercised WireMock itself and was removed. A real circuit-breaker test needs the gateway running against WireMock-backed downstreams.
 - **`e2e-tests`** — runs against the live docker-compose stack. `BaseE2ETest` sets up Playwright Chromium (`-Dheadless`, default `true`), a `PetClinicClient` and the DAOs, and attaches a full-page screenshot to Allure after every test. The Page Object Model is in `src/main/java/.../e2e/pages`. Tests are split into `api/`, `ui/` and `hybrid/`. Hybrid tests check consistency between the UI, the API and the DB.
 

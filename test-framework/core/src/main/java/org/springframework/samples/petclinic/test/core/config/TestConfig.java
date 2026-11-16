@@ -26,19 +26,4 @@ public interface TestConfig extends Config {
     @DefaultValue("petclinic")
     String dbPassword();
 
-    @Key("ai.triage.enabled")
-    @DefaultValue("false")
-    boolean aiTriageEnabled();
-
-    @Key("ai.base.url")
-    @DefaultValue("http://localhost:8045/v1")
-    String aiBaseUrl();
-
-    @Key("ai.api.key")
-    @DefaultValue("antigravity")
-    String aiApiKey();
-
-    @Key("ai.model")
-    @DefaultValue("gemini-3.8-flash")
-    String aiModel();
 }

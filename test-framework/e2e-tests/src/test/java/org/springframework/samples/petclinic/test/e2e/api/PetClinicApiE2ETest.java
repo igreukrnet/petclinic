@@ -93,9 +93,7 @@ public class PetClinicApiE2ETest extends BaseE2ETest {
         assertThat(dbVisit.get().description()).isEqualTo(visitReq.description());
 
         // Step 6: Verify Vets endpoint and SQL match
-        Response vetsResponse = petClinicClient.getVets();
-        vetsResponse.then().statusCode(200);
-        List<VetDto> apiVets = vetsResponse.jsonPath().getList(".", VetDto.class);
+        List<VetDto> apiVets = petClinicClient.getVetDtos();
         List<VetDto> dbVets = vetDao.findAllWithSpecialties();
         assertThat(apiVets.size()).isEqualTo(dbVets.size());
     }
