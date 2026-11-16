@@ -147,7 +147,9 @@ jobs:
           retention-days: 30
 
       - name: Publish Allure Report to AWS S3 & CloudFront
-        if: always() && (github.event_name != 'workflow_dispatch' || inputs.publish_report == true) && env.CAN_PUBLISH == 'true'
+        # Publishing is manual-only for now. The nightly schedule runs the tests but does not publish.
+        # To re-enable scheduled publishing, see test-framework/BACKLOG.md.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.publish_report == true && env.CAN_PUBLISH == 'true'
         env:
           CAN_PUBLISH: ${{ secrets.AWS_ACCESS_KEY_ID != '' && vars.S3_BUCKET_NAME != '' }}
           AWS_REGION: ${{ vars.AWS_REGION || 'eu-north-1' }}

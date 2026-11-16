@@ -19,6 +19,16 @@ Update this file when an item is started, finished or dropped.
 - **Decision needed: owner search.** The UI search box is labelled "Last name" but matches all owner fields.
   The API has no search at all. Decide whether a search endpoint is wanted before writing tests for it.
 
+## Parked for later (CI and local run)
+
+- **Re-enable scheduled Allure publishing.** `e2e-tests.yml` publishes the report only on a manual run with
+  `publish_report=true`. The nightly schedule still runs the tests but does not publish, because the tests are
+  not stable yet. Re-enable it once the suite is green: restore the schedule-aware condition in the
+  "Publish Allure Report" step. Note that a nightly run on commit `7045bf3` already published an old report,
+  which should be replaced or removed.
+- **GenAI service.** Not run locally or in CI: it needs `OPENAI_API_KEY` or the Azure settings, and no test
+  uses it yet. Add it when there is a test for it and a key to use.
+
 ## Blocked on a decision
 
 - **Date contract (issue #3).** Tests read dates through `FlexibleLocalDateDeserializer`, which accepts both
