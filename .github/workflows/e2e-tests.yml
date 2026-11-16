@@ -167,11 +167,12 @@ jobs:
           
           if [ -d "$REPORT_DIR" ]; then
             echo "Deploying Allure report to s3://${S3_BUCKET}/latest/..."
-            aws s3 sync "$REPORT_DIR" "s3://${S3_BUCKET}/latest/" --delete
-            
+            # no-cache makes browsers revalidate the report, so an old copy is never shown.
+            aws s3 sync "$REPORT_DIR" "s3://${S3_BUCKET}/latest/" --delete --cache-control "no-cache"
+
             BUILD_PATH="s3://${S3_BUCKET}/builds/${{ github.run_number }}/"
             echo "Archiving report build to $BUILD_PATH..."
-            aws s3 sync "$REPORT_DIR" "$BUILD_PATH"
+            aws s3 sync "$REPORT_DIR" "$BUILD_PATH" --cache-control "no-cache"
             
             if [ -n "$CLOUDFRONT_ID" ]; then
               echo "Invalidating CloudFront cache..."
