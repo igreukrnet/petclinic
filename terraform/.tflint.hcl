@@ -55,24 +55,8 @@ rule "terraform_unused_required_providers" {
   enabled = true
 }
 
-# AWS specific rules
-rule "aws_instance_default_security_group" {
-  enabled = true
-}
-
-rule "aws_instance_ebs_encryption" {
-  enabled = true
-}
-
-rule "aws_instance_iam_instance_profile" {
-  enabled = true
-}
-
+# AWS specific rules (names must exist in the ruleset version pinned above; see its docs/rules)
 rule "aws_resource_missing_tags" {
   enabled = true
   tags   = ["Project", "Environment", "ManagedBy"]
-}
-
-rule "aws_s3_bucket_versioning" {
-  enabled = true
 }
