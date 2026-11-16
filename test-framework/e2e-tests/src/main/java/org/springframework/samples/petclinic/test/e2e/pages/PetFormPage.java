@@ -5,7 +5,11 @@ import com.microsoft.playwright.Page;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 
-public class PetFormPage extends BasePage {
+public class PetFormPage extends FormPage {
+
+    public static final String NAME = "#pet-name";
+    public static final String BIRTH_DATE = "#pet-birth-date";
+    public static final String TYPE = "#pet-type";
 
     public PetFormPage(Page page) {
         super(page);
@@ -20,9 +24,9 @@ public class PetFormPage extends BasePage {
     @Step("Fill pet form: {request}")
     public PetFormPage fillForm(PetRequest request) {
         waitForLoadingSpinner();
-        page.locator("#pet-name").fill(request.name());
-        page.locator("#pet-birth-date").fill(request.birthDate());
-        page.locator("#pet-type").selectOption(String.valueOf(request.typeId()));
+        page.locator(NAME).fill(request.name());
+        page.locator(BIRTH_DATE).fill(request.birthDate());
+        page.locator(TYPE).selectOption(String.valueOf(request.typeId()));
         return this;
     }
 

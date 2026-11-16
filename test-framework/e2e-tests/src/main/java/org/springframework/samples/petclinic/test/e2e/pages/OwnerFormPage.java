@@ -5,7 +5,13 @@ import com.microsoft.playwright.Page;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
 
-public class OwnerFormPage extends BasePage {
+public class OwnerFormPage extends FormPage {
+
+    public static final String FIRST_NAME = "#owner-first-name";
+    public static final String LAST_NAME = "#owner-last-name";
+    public static final String ADDRESS = "#owner-address";
+    public static final String CITY = "#owner-city";
+    public static final String TELEPHONE = "#owner-telephone";
 
     public OwnerFormPage(Page page) {
         super(page);
@@ -26,12 +32,12 @@ public class OwnerFormPage extends BasePage {
     @Step("Fill owner form: {request}")
     public OwnerFormPage fillForm(OwnerRequest request) {
         waitForLoadingSpinner();
-        fillIfNotNull("#owner-first-name", request.firstName());
-        fillIfNotNull("#owner-last-name", request.lastName());
-        fillIfNotNull("#owner-address", request.address());
-        fillIfNotNull("#owner-city", request.city());
+        fillIfNotNull(FIRST_NAME, request.firstName());
+        fillIfNotNull(LAST_NAME, request.lastName());
+        fillIfNotNull(ADDRESS, request.address());
+        fillIfNotNull(CITY, request.city());
         if (request.telephone() != null) {
-            fillIfNotNull("#owner-telephone", request.telephone().replaceAll("[^0-9]", ""));
+            fillIfNotNull(TELEPHONE, request.telephone().replaceAll("[^0-9]", ""));
         }
         return this;
     }
@@ -39,7 +45,7 @@ public class OwnerFormPage extends BasePage {
     @Step("Update address to: {newAddress}")
     public OwnerFormPage updateAddress(String newAddress) {
         waitForLoadingSpinner();
-        fillIfNotNull("#owner-address", newAddress);
+        fillIfNotNull(ADDRESS, newAddress);
         return this;
     }
 

@@ -23,7 +23,12 @@ public class AiTriageClient {
     private final AiTriageConfig config;
 
     public AiTriageClient() {
-        this.config = ConfigFactory.create(AiTriageConfig.class);
+        this(ConfigFactory.create(AiTriageConfig.class));
+    }
+
+    /** For tests and for callers that bring their own settings. */
+    public AiTriageClient(AiTriageConfig config) {
+        this.config = config;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -96,6 +101,9 @@ public class AiTriageClient {
                 log.warn("AI Triage service responded with status {}: {}", response.statusCode(), response.body());
                 return "⚠️ AI Triage error (HTTP " + response.statusCode() + "): " + response.body();
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "⚠️ Анализ AI Triage прерван: " + e.getMessage();
         } catch (Exception e) {
             log.error("Failed to execute AI Triage analysis", e);
             return "⚠️ Не удалось получить анализ AI Triage: " + e.getMessage();

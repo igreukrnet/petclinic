@@ -2,11 +2,8 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.TimeoutError;
 import com.microsoft.playwright.options.AriaRole;
-import com.microsoft.playwright.options.WaitForSelectorState;
 import io.qameta.allure.Step;
-import org.slf4j.LoggerFactory;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -56,10 +53,20 @@ public class OwnerDetailsPage extends BasePage {
         return new PetFormPage(page);
     }
 
+    /**
+     * The details are rendered together with the heading, so once the heading is visible the lists are complete.
+     * Waiting for it fails with the original assertion message if the page never loads; the checks below
+     * then read the page as it is and never wait for something that may not come.
+     */
+    private void waitUntilLoaded() {
+        waitForLoadingSpinner();
+        assertThat(page.locator("h2:text-is('Owner Information')")).isVisible();
+    }
+
     @Step("Check if pet '{petName}' is listed")
     public boolean hasPet(String petName) {
-        waitForLoadingSpinner();
-        return isVisibleWithin(page.locator("dd").filter(new Locator.FilterOptions().setHasText(petName)).first());
+        waitUntilLoaded();
+        return page.locator("dd").filter(new Locator.FilterOptions().setHasText(petName)).count() > 0;
     }
 
     @Step("Click 'Add Visit' for pet")
@@ -71,13 +78,8 @@ public class OwnerDetailsPage extends BasePage {
 
     @Step("Check if visit with description '{description}' is listed")
     public boolean hasVisitDescription(String description) {
-        waitForLoadingSpinner();
-        Locator cell = page.locator("td").filter(new Locator.FilterOptions().setHasText(description)).first();
-        boolean visible = isVisibleWithin(cell);
-        if (!visible) {
-            LoggerFactory.getLogger(OwnerDetailsPage.class).warn("Visit description not found: {}", description);
-        }
-        return visible;
+        waitUntilLoaded();
+        return page.locator("td").filter(new Locator.FilterOptions().setHasText(description)).count() > 0;
     }
 
     /**
@@ -89,16 +91,5 @@ public class OwnerDetailsPage extends BasePage {
         Locator value = page.locator("table tr:has(th:text-is('" + label + "')) td").first();
         assertThat(value).not().isEmpty();
         return value.textContent().trim();
-    }
-
-    private boolean isVisibleWithin(Locator locator) {
-        try {
-            locator.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(5000));
-            return true;
-        } catch (TimeoutError e) {
-            return false;
-        }
     }
 }

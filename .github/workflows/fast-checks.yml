@@ -49,6 +49,10 @@ jobs:
         run: |
           mvn -B test -pl component-tests -f test-framework/pom.xml "-Dgroups=!known-defect"
 
+      - name: Run AI Triage Tests
+        run: |
+          mvn -B test -pl ai-triage -f test-framework/pom.xml
+
       - name: Generate Allure Report
         if: always()
         run: |

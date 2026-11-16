@@ -156,3 +156,14 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 Сделано: `VetsServiceComponentTest` (3, зелёные), `BaseVisitsTest` (загружает `schema.sql` и `data.sql` customers-service из исходников приложения через хук `prepareDatabase`), `VisitsServiceComponentTest` (11: 10 зелёных, 1 `known-defect` issue #4), `VisitsTimeZoneComponentTest` (1, `known-defect`, issue #14: дата визита сдвигается на день назад при `TZ=Europe/Kyiv`). JAR-ы vets и visits собирает шаг «Build application JARs» в CI; локально их нужно собрать (`cd app && ./mvnw package -DskipTests spring-boot:repackage`).
 
 Не покрыто: пустое описание визита (ждёт решения, раздел 7), кэш `/vets` (`@Cacheable`, поведение не определено), genai-service.
+
+## 11. UI, слабые места фреймворка (2026-11-17)
+
+Пользователь выдал автономный режим на эту часть: решения принимались без подтверждений, отчёт по итогам.
+
+- **UI-валидация форм** (`FormValidationUiE2ETest`, 13 запусков, все зелёные). Фронтенд проверяет формы нативной валидацией браузера (`required`, `pattern`, `maxlength`, `type=date`) через `reportValidity()`, серверные ошибки показывает в `.alert-danger`. Тесты только наблюдают: `FormPage.invalidReason` читает `validity`, `writeRequestsSent` записывает неудачные запросы, ничего не отключается и не подставляется скриптами. Для каждого случая проверяется три вещи: форма осталась на месте, на сервер ничего не ушло, в БД ничего нет. Дефектов приложения не найдено.
+- **Ловушка Playwright:** `fill` печатает через редактор браузера и поэтому уважает `maxlength` (13 цифр превращаются в 12, форма становится валидной). Это не дефект приложения. Для проверки `maxlength` есть `typeInto`.
+- **Страница ветеринаров** (`VetsPageUiE2ETest`, 4 запуска): список против БД и против API (гибрид), переход из навигации, недоступный сервис (503 подставляется для одного запроса через `page.route`, стек не трогается).
+- **Слабые места**: исправлены все пять из бэклога (см. `BACKLOG.md`, раздел Done). `Thread.sleep` в страницах уже не было, строку про долг в `CLAUDE.md` убрали.
+- **E2E целиком** на локальном стеке: 51 тест, 48 зелёных, красные те же три (issues #1, #4, #5). БД после прогона: 10 владельцев, 13 питомцев, 4 визита (seed).
+- Fast Checks теперь запускает и тесты `ai-triage`.

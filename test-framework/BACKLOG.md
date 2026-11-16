@@ -5,13 +5,11 @@ Update this file when an item is started, finished or dropped.
 
 ## Deferred from P3 (coverage)
 
-- **Component tests against real services (plan item 23).** Replace the DAO-only component tests with tests that
-  run a real service in a container next to MySQL (Testcontainers, image built from the service JAR), call it over
-  HTTP, and check the database through the `core` DAOs. Start with customers-service, which runs standalone
-  (recipe and feasibility check in `HANDOFF.md`, section 10). Add a real gateway circuit-breaker test later, with
-  the gateway running against WireMock downstreams. Approach approved; the base class and owner tests of customers-service are done. Pets, pet types and `known-defect` tests are done too. The gateway (routing, fallback, retry, aggregate, circuit breaker) is done too. vets-service and visits-service are done too (all four services have component tests). Detailed plan: `HANDOFF.md`, section 10.
-- **UI validation of forms and the Veterinarians page (plan item 24).**
-  No UI test checks what happens when a form is submitted with invalid data. `VetsPage` exists but no test uses it.
+- **Component tests: nothing planned.** Done for customers, vets, visits and the gateway (details: `HANDOFF.md`,
+  section 10 and the sections after it). Open work there depends on the decisions below.
+- **UI: more form cases.** Done: required fields, telephone pattern and `maxlength`, blank names, future birth date,
+  the Veterinarians page. Not done, because the expected behaviour is undecided: a visit description of only spaces
+  (see the decision on empty descriptions below) and a description over 8192 characters typed by a user.
 - **Decision needed: empty visit description.** The API accepts `description: ""` and returns 201.
   Is this a business rule (allowed) or a missing validation? Until decided, no test asserts either way.
 - **Decision needed: duplicate owner telephone.** The API accepts two owners with the same telephone (201).
@@ -44,8 +42,19 @@ Update this file when an item is started, finished or dropped.
 
 ## Known weaknesses in the framework (not planned yet)
 
-- `PetRowMapper` swallows `SQLException` when reading the type, which can hide a broken query.
-- `deleteOwnerCascade` is not transactional: a failure in the middle can leave a partly deleted owner.
-- `ai-triage` is tested only with the feature off; the live path is never exercised in CI.
-- `VetsPage` is unused.
-- `OwnerDetailsPage.hasPet` and `hasVisitDescription` return `false` on any timeout, which hides the reason.
+- `OwnersPage.isOwnerPresent` returns `false` when the row does not appear within 5 s (it catches only
+  `TimeoutError`). The search filters on the client, so a sure signal for "the list is ready" is still missing.
+- `-Dservice.jar=...` applies to every service test class of a run, so it only makes sense with `-Dtest=` for one
+  service. The gateway tests use their own `-Dgateway.jar=...`.
+- The component test of customers-service cleans up with separate deletes: its database has no `visits` table,
+  so `Database.deleteOwnerCascade` cannot be used there.
+- Every component test class starts its own MySQL and service (about 1 to 1.5 minutes each locally, 30 to 40 s in CI).
+  Sharing containers between classes would be faster, but breaks the clean seed per class.
+
+## Done
+
+- Component tests of customers, vets, visits and the gateway; UI form validation and the Veterinarians page.
+- Framework weaknesses fixed: `PetRowMapper` no longer swallows `SQLException`; `Database.deleteOwnerCascade` is one
+  transaction; the live path of `ai-triage` is tested against a local fake endpoint (`AiTriageClientLocalEndpointTest`,
+  run by Fast Checks); `VetsPage` is used; `OwnerDetailsPage.hasPet` and `hasVisitDescription` wait for the page
+  heading first and then read the page, so they fail loudly if the page never loads.

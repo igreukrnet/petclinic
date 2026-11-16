@@ -69,6 +69,22 @@ public final class Database implements AutoCloseable {
         return jdbi.onDemand(VetDao.class);
     }
 
+    /**
+     * Deletes an owner with its pets and visits in one transaction, in foreign key order.
+     * Either everything is deleted or nothing is. Requires the visits table, so it is for the full schema
+     * (the E2E stack), not for a customers-service-only database.
+     */
+    public void deleteOwnerCascade(int ownerId) {
+        jdbi.useTransaction(handle -> {
+            handle.createUpdate("DELETE v FROM visits v JOIN pets p ON v.pet_id = p.id WHERE p.owner_id = :ownerId")
+                .bind("ownerId", ownerId).execute();
+            handle.createUpdate("DELETE FROM pets WHERE owner_id = :ownerId")
+                .bind("ownerId", ownerId).execute();
+            handle.createUpdate("DELETE FROM owners WHERE id = :ownerId")
+                .bind("ownerId", ownerId).execute();
+        });
+    }
+
     @Override
     public void close() {
         dataSource.close();

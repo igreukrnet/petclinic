@@ -5,7 +5,10 @@ import com.microsoft.playwright.Page;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 
-public class VisitsPage extends BasePage {
+public class VisitsPage extends FormPage {
+
+    public static final String DATE = "#visit-date";
+    public static final String DESCRIPTION = "#visit-description";
 
     public VisitsPage(Page page) {
         super(page);
@@ -20,8 +23,8 @@ public class VisitsPage extends BasePage {
     @Step("Fill visit form: {request}")
     public VisitsPage fillForm(VisitRequest request) {
         waitForLoadingSpinner();
-        page.locator("#visit-date").fill(request.date());
-        page.locator("#visit-description").fill(request.description());
+        page.locator(DATE).fill(request.date());
+        page.locator(DESCRIPTION).fill(request.description());
         return this;
     }
 

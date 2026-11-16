@@ -18,23 +18,12 @@ public class PetRowMapper implements RowMapper<PetDto> {
         Date birthDate = rs.getDate("birth_date");
         LocalDate birthDateValue = birthDate != null ? birthDate.toLocalDate() : null;
 
-        PetTypeDto type = null;
-        try {
-            int typeId = rs.getInt("type_id");
-            String typeName = rs.getString("type_name");
-            if (typeName != null || typeId > 0) {
-                type = new PetTypeDto(typeId, typeName);
-            }
-        } catch (SQLException ignored) {
-            try {
-                int typeId = rs.getInt("type_id");
-                if (typeId > 0) {
-                    type = new PetTypeDto(typeId, null);
-                }
-            } catch (SQLException ignored2) {
-                // Ignore if type_id is not present
-            }
-        }
+        // Every query that uses this mapper selects p.type_id and t.name AS type_name (LEFT JOIN types).
+        // A missing column is a broken query and must fail, so SQLException is not caught here.
+        // A NULL type name with a non-zero id means the pet refers to a type that does not exist.
+        int typeId = rs.getInt("type_id");
+        String typeName = rs.getString("type_name");
+        PetTypeDto type = (typeName != null || typeId > 0) ? new PetTypeDto(typeId, typeName) : null;
 
         return new PetDto(
             rs.getInt("id"),

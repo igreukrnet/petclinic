@@ -163,12 +163,8 @@ public abstract class BaseE2ETest {
         return petClinicClient.addVisit(ownerId, petId, request).then().statusCode(201).extract().jsonPath().getInt("id");
     }
 
-    /** Deletes an owner with its pets and visits, in FK order. Throws on failure. */
+    /** Deletes an owner with its pets and visits in one transaction. Throws on failure. */
     protected void deleteOwnerCascade(int ownerId) {
-        for (var pet : petDao.findByOwnerId(ownerId)) {
-            visitDao.deleteByPetId(pet.id());
-        }
-        petDao.deleteByOwnerId(ownerId);
-        ownerDao.deleteById(ownerId);
+        database.deleteOwnerCascade(ownerId);
     }
 }
