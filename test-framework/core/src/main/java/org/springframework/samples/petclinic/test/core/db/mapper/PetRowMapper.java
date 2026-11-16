@@ -8,6 +8,7 @@ import org.springframework.samples.petclinic.test.core.model.dto.PetTypeDto;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Collections;
 
 public class PetRowMapper implements RowMapper<PetDto> {
@@ -15,7 +16,7 @@ public class PetRowMapper implements RowMapper<PetDto> {
     @Override
     public PetDto map(ResultSet rs, StatementContext ctx) throws SQLException {
         Date birthDate = rs.getDate("birth_date");
-        String birthDateStr = birthDate != null ? birthDate.toString() : null;
+        LocalDate birthDateValue = birthDate != null ? birthDate.toLocalDate() : null;
 
         PetTypeDto type = null;
         try {
@@ -38,7 +39,7 @@ public class PetRowMapper implements RowMapper<PetDto> {
         return new PetDto(
             rs.getInt("id"),
             rs.getString("name"),
-            birthDateStr,
+            birthDateValue,
             type,
             Collections.emptyList()
         );

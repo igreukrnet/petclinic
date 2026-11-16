@@ -13,6 +13,7 @@ import org.springframework.samples.petclinic.test.core.model.request.OwnerReques
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public class VisitsServiceComponentTest extends BaseComponentTest {
         assertThat(found).isPresent();
         VisitDto visit = found.get();
         assertThat(visit.petId()).isEqualTo(petId);
-        assertThat(visit.date()).isEqualTo(visitReq.date());
+        assertThat(visit.date()).isEqualTo(LocalDate.parse(visitReq.date()));
         assertThat(visit.description()).isEqualTo(visitReq.description());
 
         List<VisitDto> petVisits = visitDao.findByPetId(petId);

@@ -14,6 +14,7 @@ import org.springframework.samples.petclinic.test.core.model.dto.PetTypeDto;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,7 +63,7 @@ public class CustomersServiceComponentTest extends BaseComponentTest {
         Optional<PetDto> foundPet = petDao.findById(petId);
         assertThat(foundPet).isPresent();
         assertThat(foundPet.get().name()).isEqualTo(petReq.name());
-        assertThat(foundPet.get().birthDate()).isEqualTo(petReq.birthDate());
+        assertThat(foundPet.get().birthDate()).isEqualTo(LocalDate.parse(petReq.birthDate()));
         assertThat(foundPet.get().type()).isNotNull();
         assertThat(foundPet.get().type().id()).isEqualTo(1);
         assertThat(foundPet.get().type().name()).isEqualTo("cat");

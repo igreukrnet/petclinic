@@ -3,7 +3,6 @@ package org.springframework.samples.petclinic.test.core.api;
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import org.springframework.samples.petclinic.test.core.model.dto.OwnerDto;
 import org.springframework.samples.petclinic.test.core.model.dto.PetTypeDto;
 import org.springframework.samples.petclinic.test.core.model.dto.VetDto;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
@@ -40,15 +39,6 @@ public class PetClinicClient {
             .body(request)
             .when()
             .post("/api/customer/owners");
-    }
-
-    @Step("API: Create owner and return OwnerDto")
-    public OwnerDto createOwnerAndGet(OwnerRequest request) {
-        return createOwner(request)
-            .then()
-            .statusCode(201)
-            .extract()
-            .as(OwnerDto.class);
     }
 
     @Step("API: Get owner by id: {ownerId}")

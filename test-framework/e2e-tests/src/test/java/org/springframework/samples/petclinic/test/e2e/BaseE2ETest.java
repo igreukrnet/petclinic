@@ -19,7 +19,7 @@ import org.springframework.samples.petclinic.test.core.ai.AiFailureTriageExtensi
 import org.springframework.samples.petclinic.test.core.api.PetClinicClient;
 import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
 import org.springframework.samples.petclinic.test.core.config.TestConfig;
-import org.springframework.samples.petclinic.test.core.db.ConnectionFactory;
+import org.springframework.samples.petclinic.test.core.db.Database;
 import org.springframework.samples.petclinic.test.core.db.dao.OwnerDao;
 import org.springframework.samples.petclinic.test.core.db.dao.PetDao;
 import org.springframework.samples.petclinic.test.core.db.dao.VetDao;
@@ -42,6 +42,7 @@ public abstract class BaseE2ETest {
 
     protected TestConfig config;
     protected PetClinicClient petClinicClient;
+    protected Database database;
     protected OwnerDao ownerDao;
     protected PetDao petDao;
     protected VisitDao visitDao;
@@ -54,10 +55,11 @@ public abstract class BaseE2ETest {
     void initSuite() {
         config = ConfigurationManager.getConfig();
         petClinicClient = new PetClinicClient(config.gatewayUrl());
-        ownerDao = ConnectionFactory.getOwnerDao();
-        petDao = ConnectionFactory.getPetDao();
-        visitDao = ConnectionFactory.getVisitDao();
-        vetDao = ConnectionFactory.getVetDao();
+        database = Database.fromConfig();
+        ownerDao = database.owners();
+        petDao = database.pets();
+        visitDao = database.visits();
+        vetDao = database.vets();
 
         boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
         playwright = Playwright.create();
@@ -130,6 +132,9 @@ public abstract class BaseE2ETest {
         }
         if (playwright != null) {
             playwright.close();
+        }
+        if (database != null) {
+            database.close();
         }
     }
 

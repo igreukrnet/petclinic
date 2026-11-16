@@ -19,6 +19,7 @@ import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 import org.springframework.samples.petclinic.test.e2e.BaseE2ETest;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,6 +71,13 @@ public class PetClinicApiE2ETest extends BaseE2ETest {
             .body("pets[0].name", equalTo(petReq.name()))
             .body("pets[0].visits", hasSize(1))
             .body("pets[0].visits[0].description", equalTo(visitReq.description()));
+
+        // Step 4b: Dates in the aggregate are checked as dates, not strings.
+        // customers-service sends pet birth dates as UTC date-times, visits-service as yyyy-MM-dd.
+        OwnerDto aggregatedOwner = aggregatedResponse.as(OwnerDto.class);
+        PetDto aggregatedPet = aggregatedOwner.pets().get(0);
+        assertThat(aggregatedPet.birthDate()).isEqualTo(LocalDate.parse(petReq.birthDate()));
+        assertThat(aggregatedPet.visits().get(0).date()).isEqualTo(LocalDate.parse(visitReq.date()));
 
         // Step 5: SQL Direct Verification via JDBI
         Optional<OwnerDto> dbOwner = ownerDao.findById(ownerId);

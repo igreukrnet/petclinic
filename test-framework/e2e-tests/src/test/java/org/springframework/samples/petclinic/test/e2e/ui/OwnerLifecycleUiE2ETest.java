@@ -22,6 +22,7 @@ import org.springframework.samples.petclinic.test.e2e.pages.OwnersPage;
 import org.springframework.samples.petclinic.test.e2e.pages.PetFormPage;
 import org.springframework.samples.petclinic.test.e2e.pages.VisitsPage;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,7 +86,7 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
             .filter(p -> p.name().equals(petReq.name()))
             .findFirst()
             .orElseThrow(() -> new AssertionError("Pet not found in database: " + petReq.name()));
-        assertThat(matchedPet.birthDate()).isEqualTo(petReq.birthDate());
+        assertThat(matchedPet.birthDate()).isEqualTo(LocalDate.parse(petReq.birthDate()));
 
         List<VisitDto> dbVisits = visitDao.findByPetId(matchedPet.id());
         assertThat(dbVisits)

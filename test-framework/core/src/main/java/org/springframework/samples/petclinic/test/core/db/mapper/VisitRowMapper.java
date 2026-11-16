@@ -7,17 +7,18 @@ import org.springframework.samples.petclinic.test.core.model.dto.VisitDto;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 public class VisitRowMapper implements RowMapper<VisitDto> {
 
     @Override
     public VisitDto map(ResultSet rs, StatementContext ctx) throws SQLException {
         Date visitDate = rs.getDate("visit_date");
-        String dateStr = visitDate != null ? visitDate.toString() : null;
+        LocalDate date = visitDate != null ? visitDate.toLocalDate() : null;
         return new VisitDto(
             rs.getInt("id"),
             rs.getInt("pet_id"),
-            dateStr,
+            date,
             rs.getString("description")
         );
     }
