@@ -126,3 +126,17 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 - Часовой пояс контейнера задаём явно (`TZ=UTC`). Отдельный тест с тегом `known-defect` фиксирует зависимость даты от часового пояса (issue #3).
 - Старые компонентные тесты на DAO удаляем целиком.
 - Перед написанием остальных сервисов показать пользователю первый тест и согласовать.
+
+### План реализации первого компонентного теста (согласовано, код ещё не писался)
+
+Подход одобрен пользователем (2026-11-16). Реализацию пользователь отложил на следующий чат. Что выяснено для старта:
+
+- **Файлы модуля сейчас:** `component-tests/src/test/java/.../component/BaseComponentTest.java`, `customers/CustomersServiceComponentTest.java`, `visits/VisitsServiceComponentTest.java`, `src/test/resources/db/init.sql`. Все четыре удалить, это старый слой на DAO. Пакет остаётся `org.springframework.samples.petclinic.test.component`.
+- **Образ сервиса.** `app/docker/Dockerfile` собирает слоёный образ (`eclipse-temurin:17`, `JarLauncher`), для теста он избыточен. Проще собрать образ из fat JAR через `ImageFromDockerfile`: `FROM eclipse-temurin:17`, копия JAR, `ENTRYPOINT java -jar`. Путь к JAR по умолчанию из каталога модуля: `../../app/spring-petclinic-customers-service/target/spring-petclinic-customers-service-4.0.1.jar`, переопределяется системным свойством. Если JAR нет, тест падает с понятным сообщением «сначала соберите JAR-ы приложения». CI (`fast-checks.yml`, шаг `mvn -B test -pl component-tests`) JAR уже собирает до этого шага.
+- **Переменные окружения контейнера сервиса:** `SPRING_PROFILES_ACTIVE=mysql`, `SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/petclinic?allowPublicKeyRetrieval=true&useSSL=false`, `SPRING_DATASOURCE_USERNAME=root`, `SPRING_DATASOURCE_PASSWORD=petclinic`, `SPRING_CLOUD_CONFIG_ENABLED=false`, `EUREKA_CLIENT_ENABLED=false`, `SPRING_SQL_INIT_MODE=always`, `SPRING_SQL_INIT_SCHEMA_LOCATIONS=classpath:db/mysql/schema.sql`, `SPRING_SQL_INIT_DATA_LOCATIONS=classpath:db/mysql/data.sql`, `TZ=UTC`, **`SERVER_PORT=8081`**. Порт нужно задать явно: без config-server порт по умолчанию 8080 (в E2E его даёт config-server).
+- **MySQL:** `MySQLContainer` в общей сети с алиасом `mysql`, база `petclinic`, пользователь `root`, пароль `petclinic`. Без `withReuse`, чтобы каждый прогон был чистым.
+- **Готовность:** `Wait.forHttp("/petTypes")` со статусом 200 и таймаутом около 3 минут.
+- **Клиент и БД:** RestAssured с базовым адресом из `container.getHost()` и `getMappedPort(8081)` (фильтр `AllureRestAssured` есть в зависимостях модуля); БД через `Database.connect(...)` и DAO из `core`.
+- **Первые тесты для показа пользователю:** seed (10 владельцев, George Franklin), создание владельца с проверкой строки в БД, невалидные владельцы (400), `id` 0 и -1 (400), несуществующий владелец (404). Затем питомцы, типы, `PUT`. Тесты с тегом `known-defect`: неизвестный `typeId` (400 вместо 500, issue #5), формат даты питомца `yyyy-MM-dd` (issue #3), зависимость от часового пояса (контейнер с `TZ=Europe/Kyiv`, issue #3).
+- **Наблюдение:** в `component-tests/` лежит каталог `.allure/` с командной строкой Allure (создан плагином `allure-maven`); не относится к тестам, при необходимости проверить `.gitignore`.
+
