@@ -63,14 +63,23 @@ jobs:
       - name: Comment PR with Results
         if: github.event_name == 'pull_request' && (steps.fmt.outcome != 'success' || steps.validate.outcome != 'success')
         uses: actions/github-script@v7
+        env:
+          FMT_OUTCOME: ${{ steps.fmt.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
         with:
           script: |
+            // Ternary expressions are not valid inside GitHub Actions expressions, so the
+            // outcomes are passed in through env and the decision is made here in JavaScript.
+            const fmtOutcome = process.env.FMT_OUTCOME;
+            const validateOutcome = process.env.VALIDATE_OUTCOME;
+            const mark = (outcome) => outcome === 'success' ? '✅ Pass' : '❌ Fail';
+
             let comment = '## Terraform Validation Results\n\n';
             comment += '| Check | Status |\n|-------|--------|\n';
-            comment += `| Format | ${{ steps.fmt.outcome == 'success' ? '✅ Pass' : '❌ Fail' }} |\n`;
-            comment += `| Validate | ${{ steps.validate.outcome == 'success' ? '✅ Pass' : '❌ Fail' }} |\n`;
-            
-            if ('${{ steps.fmt.outcome }}' !== 'success') {
+            comment += `| Format | ${mark(fmtOutcome)} |\n`;
+            comment += `| Validate | ${mark(validateOutcome)} |\n`;
+
+            if (fmtOutcome !== 'success') {
               comment += '\n**Fix formatting with:**\n```bash\nterraform fmt -recursive terraform/\n```\n';
             }
             
