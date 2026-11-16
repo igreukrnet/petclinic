@@ -5,11 +5,11 @@ Update this file when an item is started, finished or dropped.
 
 ## Deferred from P3 (coverage)
 
-- **Component tests against real services (plan item 23).**
-  Today `component-tests` exercise only the DAO layer of `core`, not the services. Replace them with tests
-  that start a real service (Spring Boot or its JAR) with MySQL in Testcontainers and mock the neighbours
-  with WireMock. Also add a real gateway circuit-breaker test that runs the gateway against WireMock
-  downstreams. Large task, not started.
+- **Component tests against real services (plan item 23).** Replace the DAO-only component tests with tests that
+  run a real service in a container next to MySQL (Testcontainers, image built from the service JAR), call it over
+  HTTP, and check the database through the `core` DAOs. Start with customers-service, which runs standalone
+  (recipe and feasibility check in `HANDOFF.md`, section 10). Add a real gateway circuit-breaker test later, with
+  the gateway running against WireMock downstreams. Waiting for approval of the approach.
 - **UI validation of forms and the Veterinarians page (plan item 24).**
   No UI test checks what happens when a form is submitted with invalid data. `VetsPage` exists but no test uses it.
 - **Decision needed: empty visit description.** The API accepts `description: ""` and returns 201.

@@ -70,7 +70,7 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 
 - **#1** Плавающий чат перехватывает клик «Add Visit». Чат сворачивается кнопкой «Chat with Us!».
 - **#2** Фронтенд: даты на день раньше в западных поясах (`utils/dates.js`). Проверено через `Intl`: Нью-Йорк показывает 6 вместо 7.
-- **#3** API: дата питомца приходит как UTC-datetime, дата визита как `yyyy-MM-dd`. Причина: нет `@JsonFormat` у `Pet.birthDate`. Гипотеза про `TZ` JVM не проверена.
+- **#3** API: дата питомца приходит как UTC-datetime, дата визита как `yyyy-MM-dd`. Причина: нет `@JsonFormat` у `Pet.birthDate`. **Гипотеза про `TZ` JVM подтверждена (2026-11-16):** локальный JVM в Europe/Kyiv (UTC+3) отдал DATE `2000-09-07` как `2000-09-06T21:00:00.000Z`, то есть на день раньше. В контейнерах стека `TZ=UTC`, поэтому там сдвиг не виден. Комментарий с этим фактом добавлен к issue #3 (2026-11-16).
 - **#4** Визит к несуществующему питомцу → 500 (нарушение `visits_ibfk_1` не обрабатывается). Ожидается 404.
 - **#5** Питомец с неизвестным `typeId` → 500 (тип не проверяется, NPE в `Pet.toString()`). Ожидается 400.
 
@@ -83,10 +83,11 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 - Формат дат (issue #3): какой формат считать контрактом API. Тесты пока принимают оба.
 - Поиск владельцев в API: нужен ли.
 - Переключение публикации с CloudFront на GitHub Pages: позже, возможно.
+- Подход к компонентным тестам из раздела 10: ждёт «да» пользователя.
 
 ## 8. Что дальше
 
-2. **Компонентный слой переписать с нуля** на реальных сервисах, по одному сервису, начиная с customers-service. `core` (конфиг, клиент, DAO, Allure) и page objects сохраняем. Старые компонентные тесты не чинить.
+2. **Компонентный слой переписать с нуля** на реальных сервисах, по одному сервису, начиная с customers-service. `core` (конфиг, клиент, DAO, Allure) и page objects сохраняем. Старые компонентные тесты не чинить. Осуществимость проверена, подход описан в разделе 10.
 3. UI-валидация форм и страница ветеринаров — не покрыты.
 4. Решения из раздела 7.
 5. GenAI — не поднимать, пока нет теста и ключа.
@@ -99,3 +100,29 @@ docker compose -f docker-compose.test.yml -f docker-compose.local-full.yml up -d
 - `actionlint` для проверки workflow: `$TEMP\al\bin\actionlint.exe` (ставится `python -I -m pip install actionlint-py --target $TEMP\al`, правило разрешено в `.claude/settings.local.json`; временная папка может очиститься — тогда поставить заново).
 - Remote: `https://github.com/igreukrnet/petclinic.git` (репозиторий публичный).
 - В PowerShell аргументы `-Dgroups=...` с `!` и `=` берём в кавычках.
+
+## 10. Компонентные тесты на реальном сервисе: результат проверки и подход
+
+Проверка (2026-11-16), в репозиторий ничего не вносилось, временные процессы и контейнер удалены.
+
+**Автономный запуск customers-service работает.** Тот же JAR, что в E2E (`app/spring-petclinic-customers-service/target/spring-petclinic-customers-service-4.0.1.jar`), JDK 17, реальная MySQL 8.4.5. Без config-server и Eureka. Нужны параметры:
+```
+--spring.profiles.active=mysql
+--spring.datasource.url=jdbc:mysql://<host>:<port>/petclinic?allowPublicKeyRetrieval=true&useSSL=false
+--spring.datasource.username=root --spring.datasource.password=petclinic
+--spring.cloud.config.enabled=false --eureka.client.enabled=false
+--spring.sql.init.mode=always
+--spring.sql.init.schema-locations=classpath:db/mysql/schema.sql
+--spring.sql.init.data-locations=classpath:db/mysql/data.sql
+```
+Без двух последних параметров сервис стартует, но отвечает 500 (`Table 'petclinic.owners' doesn't exist`): в боевом стеке схему настраивает config-server. Старт 15–20 с.
+
+Поведение автономного сервиса: `/owners` отдаёт 10 владельцев, `/petTypes` 6 типов, `POST /owners` с `{}` → 400, `GET /owners/99999` → 404, питомец с `typeId=99` → 500 (issue #5).
+
+**Предложенный подход (ждёт «да»):**
+- Сервис в контейнере через Testcontainers из образа, собранного из JAR (`app/docker/Dockerfile`), рядом MySQL в общей сети. JAR уже собирает `fast-checks.yml`.
+- Тесты ходят по HTTP прямо в сервис (без шлюза и без префикса `/api/customer`), состояние в БД сверяют через DAO из `core`.
+- Для customers-service WireMock не нужен (он не вызывает другие сервисы). Заглушки понадобятся для шлюза: следующий шаг после customers-service.
+- Часовой пояс контейнера задаём явно (`TZ=UTC`). Отдельный тест с тегом `known-defect` фиксирует зависимость даты от часового пояса (issue #3).
+- Старые компонентные тесты на DAO удаляем целиком.
+- Перед написанием остальных сервисов показать пользователю первый тест и согласовать.
