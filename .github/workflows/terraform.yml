@@ -54,6 +54,11 @@ jobs:
         uses: terraform-linters/setup-tflint@v4
         id: tflint
 
+      - name: Install TFLint plugins
+        working-directory: terraform
+        run: |
+          tflint --init
+
       - name: Run TFLint
         id: tflint-run
         working-directory: terraform
