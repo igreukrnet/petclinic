@@ -4,13 +4,13 @@
 # GenAI is intentionally left out: it needs OPENAI_API_KEY and no test uses it yet (see test-framework/BACKLOG.md).
 services:
   tracing-server:
-    image: openzipkin/zipkin
+    image: openzipkin/zipkin:3@sha256:d17e856dcbba7ffeefbbfc252f89ab78a4ab6faed47e646d46daad78f91b5ee2
     container_name: tracing-server
     ports:
       - 9411:9411
 
   admin-server:
-    image: springcommunity/spring-petclinic-admin-server
+    image: springcommunity/spring-petclinic-admin-server:3.4.1@sha256:4290089fd95e88c4201b6e60b14348a3a616bd1212d5d7572ef594fa28dcb082
     container_name: admin-server
     depends_on:
       config-server:

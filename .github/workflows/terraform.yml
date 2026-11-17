@@ -27,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: 1.5.0
 
@@ -51,7 +51,7 @@ jobs:
         run: terraform validate
 
       - name: TFLint - Detect Violations
-        uses: terraform-linters/setup-tflint@v4
+        uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4
         id: tflint
 
       - name: Install TFLint plugins
@@ -67,7 +67,7 @@ jobs:
 
       - name: Comment PR with Results
         if: github.event_name == 'pull_request' && (steps.fmt.outcome != 'success' || steps.validate.outcome != 'success')
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           FMT_OUTCOME: ${{ steps.fmt.outcome }}
           VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
