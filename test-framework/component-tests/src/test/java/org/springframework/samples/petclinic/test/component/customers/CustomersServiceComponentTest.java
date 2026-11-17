@@ -56,14 +56,18 @@ class CustomersServiceComponentTest extends BaseComponentTest {
     }
 
     @Test
-    @DisplayName("Seed data: 10 owners, George Franklin is owner 1")
-    void seedDataIsLoaded() {
-        given(service).get("/owners")
+    @DisplayName("GET /owners returns the owners of the database, with the seeded George Franklin as owner 1")
+    void ownersMatchDatabase() {
+        List<Integer> idsInDatabase = database.owners().findAll().stream().map(OwnerDto::id).toList();
+        assertThat(idsInDatabase).contains(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+
+        List<Integer> idsFromService = given(service).get("/owners")
             .then().statusCode(200)
-            .body("", hasSize(10))
             .body("find { it.id == 1 }.firstName", equalTo("George"))
-            .body("find { it.id == 1 }.lastName", equalTo("Franklin"));
-        assertThat(database.owners().count()).isEqualTo(10);
+            .body("find { it.id == 1 }.lastName", equalTo("Franklin"))
+            .extract().path("id");
+
+        assertThat(idsFromService).containsExactlyInAnyOrderElementsOf(idsInDatabase);
     }
 
     @Test

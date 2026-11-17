@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.model.dto.SpecialtyDto;
 import org.springframework.samples.petclinic.test.core.model.dto.VetDto;
-import org.springframework.samples.petclinic.test.e2e.BaseE2ETest;
+import org.springframework.samples.petclinic.test.e2e.BaseUiE2ETest;
 import org.springframework.samples.petclinic.test.e2e.pages.VetsPage;
 import org.springframework.samples.petclinic.test.e2e.pages.VetsPage.VetRow;
 import org.springframework.samples.petclinic.test.e2e.pages.WelcomePage;
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Epic("E2E Tests")
 @Feature("UI Veterinarians page")
 @Tag("ui")
-class VetsPageUiE2ETest extends BaseE2ETest {
+class VetsPageUiE2ETest extends BaseUiE2ETest {
 
     private static List<VetRow> expectedRows(List<VetDto> vets) {
         return vets.stream()
@@ -58,7 +58,7 @@ class VetsPageUiE2ETest extends BaseE2ETest {
     @DisplayName("The Veterinarians link in the navigation bar opens the list")
     void navigationBarOpensVets() {
         new WelcomePage(page).open();
-        VetsPage vetsPage = new VetsPage(page).openFromNavigation();
+        VetsPage vetsPage = new VetsPage(page).open();
 
         assertThat(vetsPage.getVets()).isNotEmpty();
         assertThat(vetsPage.currentPath()).isEqualTo("/vets");

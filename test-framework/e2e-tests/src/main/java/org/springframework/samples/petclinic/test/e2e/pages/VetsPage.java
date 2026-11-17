@@ -16,16 +16,9 @@ public class VetsPage extends BasePage {
         super(page);
     }
 
-    @Step("Open Veterinarians list page")
-    public VetsPage open() {
-        navigate("/vets");
-        return this;
-    }
-
-    /** Opens the page by the navigation bar link, as a user does. */
     @Step("Open Veterinarians list page from the navigation bar")
-    public VetsPage openFromNavigation() {
-        page.locator("a.nav-link[title='veterinarians']").click();
+    public VetsPage open() {
+        clickNavigation("veterinarians");
         return this;
     }
 
@@ -53,14 +46,6 @@ public class VetsPage extends BasePage {
 
     public boolean isTableShown() {
         return page.locator("table").count() > 0;
-    }
-
-    public String currentPath() {
-        return java.net.URI.create(page.url()).getPath();
-    }
-
-    public Locator pageHeading() {
-        return page.locator(HEADING);
     }
 
     /** A row of the table: the full name and the specialties text, which is "none" when there are none. */

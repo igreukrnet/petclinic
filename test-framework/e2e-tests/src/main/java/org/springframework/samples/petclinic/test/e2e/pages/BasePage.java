@@ -3,19 +3,29 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
-import io.qameta.allure.Allure;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
 
-import java.io.ByteArrayInputStream;
+import java.net.URI;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+/**
+ * Common parts of the page objects.
+ * <p>
+ * Pages are reached the way a user reaches them: the application is loaded at its root address and
+ * everything else is a click on a link. Deep links are not used, because the gateway answers them with
+ * 404 (for example {@code GET /owners/details/1}). That is an application defect, listed in the README,
+ * and the tests must not hide it by calling the router from a script.
+ */
 public abstract class BasePage {
 
     /**
-     * Submit button of the page's main form. The chat widget also has a form with a submit button,
+     * The main form of a page and its submit button. The chat widget also has a form with a submit button,
      * so it is excluded explicitly instead of relying on DOM order.
      */
-    protected static final String MAIN_FORM_SUBMIT = "form:not(.chatbox-footer) button[type='submit']";
+    protected static final String MAIN_FORM = "form:not(.chatbox-footer)";
+    protected static final String MAIN_FORM_SUBMIT = MAIN_FORM + " button[type='submit']";
 
     protected final Page page;
     protected final String baseUrl;
@@ -40,35 +50,28 @@ public abstract class BasePage {
         }
     }
 
-    @Step("Take screenshot: {name}")
-    public void takeScreenshot(String name) {
-        byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
-        Allure.addAttachment(name, "image/png", new ByteArrayInputStream(screenshot), ".png");
+    /** Loads the application at its root address, unless it is already loaded in this page. */
+    @Step("Open the application")
+    protected void openApplication() {
+        if (!page.url().startsWith(baseUrl) || page.locator("#app").count() == 0) {
+            page.navigate(baseUrl + "/");
+        }
+        assertThat(page.locator("a.nav-link[title='home page']")).isVisible();
     }
 
     /**
-     * Routes inside the SPA with the Vue router.
-     * <p>
-     * A full page load of a deep link does not work: the gateway answers
-     * {@code GET /owners/details/1} with 404 JSON, so only the root document is served.
-     * The router push below is the same code path as an in-app link click. It depends on Vue internals
-     * ({@code __vue_app__} on {@code #app}); if that changes, this method fails loudly instead of falling back.
+     * Clicks a link of the navigation bar. {@code title} is the title attribute of the link:
+     * "home page", "find owners", "register owner" or "veterinarians".
      */
-    @Step("Navigate to: {path}")
-    public void navigate(String path) {
-        String targetPath = (path == null || path.isEmpty()) ? "/" : (path.startsWith("/") ? path : "/" + path);
-        ensureAppLoaded();
-        page.evaluate(
-            "target => document.querySelector('#app').__vue_app__.config.globalProperties.$router.push(target)",
-            targetPath
-        );
+    @Step("Click the navigation link: {title}")
+    protected void clickNavigation(String title) {
+        openApplication();
+        page.locator("a.nav-link[title='" + title + "']").click();
         waitForLoadingSpinner();
     }
 
-    private void ensureAppLoaded() {
-        if (!page.url().startsWith(baseUrl) || page.locator("#app").count() == 0) {
-            page.navigate(baseUrl + "/");
-            page.waitForSelector("#app", new Page.WaitForSelectorOptions().setTimeout(25000));
-        }
+    /** Path of the current address, like {@code /owners/new}. */
+    public String currentPath() {
+        return URI.create(page.url()).getPath();
     }
 }

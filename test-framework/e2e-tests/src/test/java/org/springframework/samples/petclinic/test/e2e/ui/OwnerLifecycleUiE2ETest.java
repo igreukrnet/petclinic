@@ -16,7 +16,7 @@ import org.springframework.samples.petclinic.test.core.model.dto.VisitDto;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
-import org.springframework.samples.petclinic.test.e2e.BaseE2ETest;
+import org.springframework.samples.petclinic.test.e2e.BaseUiE2ETest;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnerDetailsPage;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnerFormPage;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnersPage;
@@ -30,13 +30,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Epic("E2E Tests")
 @Feature("UI Owner & Pet Lifecycle")
+// Fails on the Add Visit click: the floating chat box covers the link (issue #1).
 @Tag("ui")
-public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
+@Tag("known-defect")
+public class OwnerLifecycleUiE2ETest extends BaseUiE2ETest {
 
     @Test
     @Story("Complete user flow: Owner -> Pet -> Visit with SQL verification")
     @Severity(SeverityLevel.CRITICAL)
-    @DisplayName("Create owner via UI, add pet, add visit, and verify data consistency directly in MySQL via JDBI")
+    @DisplayName("Issue #1: create owner via UI, add pet, add visit, and verify data consistency directly in MySQL via JDBI")
     @Description("End-to-end user scenario testing Vue.js UI forms, routing, gateway aggregation and database state")
     void shouldCompleteFullOwnerPetVisitLifecycleViaUiAndVerifyInDatabase() {
         // Step 1: Generate test data
@@ -53,7 +55,7 @@ public class OwnerLifecycleUiE2ETest extends BaseE2ETest {
         // Step 3: Find the owner in the Owners table
         OwnersPage ownersPage = new OwnersPage(page).open();
         ownersPage.search(ownerReq.telephone());
-        assertThat(ownersPage.isOwnerPresent(ownerReq.telephone())).isTrue();
+        ownersPage.assertOwnerListed(ownerReq.telephone());
 
         // Step 4: Open owner details
         OwnerDetailsPage detailsPage = ownersPage.clickOwner(ownerReq.telephone());

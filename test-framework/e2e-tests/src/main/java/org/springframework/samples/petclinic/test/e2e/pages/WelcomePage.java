@@ -11,13 +11,7 @@ public class WelcomePage extends BasePage {
 
     @Step("Open Welcome page")
     public WelcomePage open() {
-        navigate("/");
+        clickNavigation("home page");
         return this;
-    }
-
-    @Step("Check if welcome title is visible")
-    public boolean isLoaded() {
-        return page.locator("h2:has-text('Welcome')").isVisible()
-            || page.locator("img.img-responsive").isVisible();
     }
 }

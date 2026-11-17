@@ -18,7 +18,7 @@ public class AiFailureTriageTest {
 
     @Test
     @Story("Automatic Root Cause Analysis")
-    @DisplayName("Verify AI Triage Client analyzes test failure with gemini-3.8-flash")
+    @DisplayName("Live check: the configured AI endpoint returns an analysis (skipped unless ai.triage.enabled=true)")
     @Description("Sends simulated failed test stacktrace and metadata to the AI endpoint and validates diagnosis")
     void shouldGenerateStructuredTriageAnalysisForSimulatedFailure() {
         Assumptions.assumeTrue(

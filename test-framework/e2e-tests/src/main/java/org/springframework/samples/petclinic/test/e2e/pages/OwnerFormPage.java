@@ -2,8 +2,11 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class OwnerFormPage extends FormPage {
 
@@ -19,13 +22,17 @@ public class OwnerFormPage extends FormPage {
 
     @Step("Open Register Owner page")
     public OwnerFormPage openNew() {
-        navigate("/owners/new");
+        clickNavigation("register owner");
+        assertThat(page.locator(FIRST_NAME)).isVisible();
         return this;
     }
 
     @Step("Open Edit Owner page for ID: {ownerId}")
     public OwnerFormPage openEdit(int ownerId) {
-        navigate("/owners/" + ownerId + "/edit");
+        new OwnerDetailsPage(page).open(ownerId);
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Edit Owner")).click();
+        waitForLoadingSpinner();
+        assertThat(page.locator(FIRST_NAME)).isVisible();
         return this;
     }
 
@@ -36,9 +43,7 @@ public class OwnerFormPage extends FormPage {
         fillIfNotNull(LAST_NAME, request.lastName());
         fillIfNotNull(ADDRESS, request.address());
         fillIfNotNull(CITY, request.city());
-        if (request.telephone() != null) {
-            fillIfNotNull(TELEPHONE, request.telephone().replaceAll("[^0-9]", ""));
-        }
+        fillIfNotNull(TELEPHONE, request.telephone());
         return this;
     }
 

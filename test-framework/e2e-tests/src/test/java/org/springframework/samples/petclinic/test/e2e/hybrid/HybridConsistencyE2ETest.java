@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.samples.petclinic.test.core.data.TestDataGenerator;
 import org.springframework.samples.petclinic.test.core.model.dto.OwnerDto;
 import org.springframework.samples.petclinic.test.core.model.request.OwnerRequest;
-import org.springframework.samples.petclinic.test.e2e.BaseE2ETest;
+import org.springframework.samples.petclinic.test.e2e.BaseUiE2ETest;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnerDetailsPage;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnerFormPage;
 import org.springframework.samples.petclinic.test.e2e.pages.OwnersPage;
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Feature("Hybrid UI + API + SQL Consistency")
 @Tag("smoke")
 @Tag("hybrid")
-public class HybridConsistencyE2ETest extends BaseE2ETest {
+public class HybridConsistencyE2ETest extends BaseUiE2ETest {
 
     @Test
     @Story("Cross-layer consistency (API Create -> UI Verify/Edit -> SQL Verify)")
@@ -44,7 +44,7 @@ public class HybridConsistencyE2ETest extends BaseE2ETest {
         // Step 2: UI verification on Owners page
         OwnersPage ownersPage = new OwnersPage(page).open();
         ownersPage.search(initialOwner.telephone());
-        assertThat(ownersPage.isOwnerPresent(initialOwner.telephone())).isTrue();
+        ownersPage.assertOwnerListed(initialOwner.telephone());
 
         // Step 3: Open details and click Edit Owner
         OwnerDetailsPage detailsPage = ownersPage.clickOwner(initialOwner.telephone());

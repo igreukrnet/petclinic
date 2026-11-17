@@ -60,3 +60,9 @@ terraform.rc
 Thumbs.db
 .kilo/
 
+
+# Local working notes and other agents' files (not part of the project)
+AUDIT_REPORT.md
+.kiro/
+test-framework/HANDOFF.md
+test-framework/NEXT_SESSION_PROMPT.md

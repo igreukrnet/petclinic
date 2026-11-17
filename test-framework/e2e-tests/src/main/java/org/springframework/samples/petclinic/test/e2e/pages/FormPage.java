@@ -2,7 +2,6 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.LoadState;
 import io.qameta.allure.Step;
 
 import java.net.URI;
@@ -15,8 +14,8 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 /**
  * Common operations of the form pages (owner, pet, visit).
  * <p>
- * Validation is only observed here, never changed: the page reports what the browser's own constraint
- * validation says about a field, and which requests the page sent. Nothing makes the form look valid.
+ * Validation is only observed here, never changed: the page reports what the constraint validation of
+ * the browser says about a field, and which requests the page sent. Nothing makes the form look valid.
  */
 public abstract class FormPage extends BasePage {
 
@@ -24,20 +23,23 @@ public abstract class FormPage extends BasePage {
 
     protected FormPage(Page page) {
         super(page);
-        page.onRequest(request -> {
-            if (request.url().contains("/api/") && !"GET".equals(request.method())) {
-                writeRequests.add(request.method() + " " + URI.create(request.url()).getPath());
+        // Every API request of the page passes through this handler before it leaves the browser.
+        // fallback() hands it on unchanged (to other handlers, then to the network).
+        page.route("**/api/**", route -> {
+            if (!"GET".equals(route.request().method())) {
+                writeRequests.add(route.request().method() + " " + URI.create(route.request().url()).getPath());
             }
+            route.fallback();
         });
     }
 
-    /** Sets the value of a field the way {@code fill} does (no key events, no {@code maxlength}). */
+    /** Sets the value of a field the way {@code fill} does: through the browser editing, so {@code maxlength} applies. */
     @Step("Fill {selector} with: {value}")
     public void fillField(String selector, String value) {
         page.locator(selector).fill(value);
     }
 
-    /** Types into a field key by key, as a user does. The browser applies {@code maxlength}. */
+    /** Types into a field key by key, as a user does. */
     @Step("Type into {selector}: {text}")
     public void typeInto(String selector, String text) {
         page.locator(selector).pressSequentially(text);
@@ -48,13 +50,17 @@ public abstract class FormPage extends BasePage {
     }
 
     /**
-     * Clicks the submit button and waits until the page has been quiet on the network.
-     * Use it when the form is expected to stay: afterwards {@link #writeRequestsSent()} is complete.
+     * Clicks the submit button of a form that is expected to be refused, and waits for the refusal to
+     * show: either the browser marks the form invalid (nothing is sent), or the application shows its
+     * error box (the server refused the request). Fails if neither happens.
+     * <p>
+     * The form checks its validity synchronously inside the click, so when this method returns after a
+     * browser refusal, {@link #writeRequestsSent()} is complete.
      */
-    @Step("Click submit and wait for the page to settle")
-    public void clickSubmit() {
+    @Step("Click submit and wait for the form to be refused")
+    public void submitExpectingRefusal() {
         page.locator(MAIN_FORM_SUBMIT).click();
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        assertThat(page.locator(MAIN_FORM + ":invalid, .alert-danger").first()).isVisible();
     }
 
     /** POST, PUT and DELETE requests to the API that this page has sent, like {@code POST /api/customer/owners}. */
@@ -63,9 +69,9 @@ public abstract class FormPage extends BasePage {
     }
 
     /**
-     * What the browser's constraint validation reports for the field: the name of the first failed rule
-     * ({@code valueMissing}, {@code patternMismatch}, {@code tooLong}, {@code badInput}, ...), or an empty
-     * string when the field is valid. Read only.
+     * What the constraint validation of the browser reports for the field: the name of the first failed
+     * rule ({@code valueMissing}, {@code patternMismatch}, {@code tooLong}, {@code badInput}, ...), or an
+     * empty string when the field is valid. Read only.
      */
     public String invalidReason(String selector) {
         Object reason = page.locator(selector).evaluate("""
@@ -93,10 +99,5 @@ public abstract class FormPage extends BasePage {
 
     public boolean isErrorAlertShown() {
         return page.locator(".alert-danger").count() > 0;
-    }
-
-    /** Path of the current address, like {@code /owners/new}. */
-    public String currentPath() {
-        return URI.create(page.url()).getPath();
     }
 }

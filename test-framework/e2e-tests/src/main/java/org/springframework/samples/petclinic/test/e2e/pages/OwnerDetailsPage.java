@@ -15,8 +15,16 @@ public class OwnerDetailsPage extends BasePage {
 
     @Step("Open Owner Details page for ID: {ownerId}")
     public OwnerDetailsPage open(int ownerId) {
-        navigate("/owners/details/" + ownerId);
+        new OwnersPage(page).open().openOwner(ownerId);
+        waitUntilLoaded();
         return this;
+    }
+
+    /** Clicks the "Add Visit" link of one pet. */
+    @Step("Click Add Visit for pet {petId} of owner {ownerId}")
+    public void clickAddVisit(int ownerId, int petId) {
+        page.locator("a[href='/owners/" + ownerId + "/pets/" + petId + "/visits']").click();
+        waitForLoadingSpinner();
     }
 
     @Step("Get owner full name")

@@ -1,20 +1,10 @@
 package org.springframework.samples.petclinic.test.e2e;
 
-import com.microsoft.playwright.Browser;
-import com.microsoft.playwright.BrowserContext;
-import com.microsoft.playwright.BrowserType;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
-import io.qameta.allure.Allure;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.samples.petclinic.test.ai.AiFailureTriageExtension;
 import org.springframework.samples.petclinic.test.core.api.PetClinicClient;
 import org.springframework.samples.petclinic.test.core.config.ConfigurationManager;
@@ -28,20 +18,18 @@ import org.springframework.samples.petclinic.test.core.model.request.OwnerReques
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Base of every E2E test: the API client, the database and the cleanup of created owners.
+ * It starts no browser. UI tests extend {@link BaseUiE2ETest}.
+ * <p>
+ * All state is held in instance fields (one instance per test class), so test classes do not share anything.
+ */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(AiFailureTriageExtension.class)
 public abstract class BaseE2ETest {
-
-    private static final Logger log = LoggerFactory.getLogger(BaseE2ETest.class);
-
-    protected static Playwright playwright;
-    protected static Browser browser;
-    protected BrowserContext context;
-    protected Page page;
 
     protected TestConfig config;
     protected PetClinicClient petClinicClient;
@@ -55,7 +43,7 @@ public abstract class BaseE2ETest {
     private final List<Integer> createdOwnerIds = new ArrayList<>();
 
     @BeforeAll
-    void initSuite() {
+    void connectToApiAndDatabase() {
         config = ConfigurationManager.getConfig();
         petClinicClient = new PetClinicClient(config.gatewayUrl());
         database = Database.fromConfig();
@@ -63,48 +51,11 @@ public abstract class BaseE2ETest {
         petDao = database.pets();
         visitDao = database.visits();
         vetDao = database.vets();
-
-        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
-        playwright = Playwright.create();
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
-        log.info("Playwright Chromium browser launched (headless={})", headless);
-    }
-
-    @BeforeEach
-    void createContextAndPage() {
-        context = browser.newContext(new Browser.NewContextOptions().setViewportSize(1280, 800));
-        page = context.newPage();
-        page.onConsoleMessage(msg -> log.info("BROWSER LOG [{}]: {}", msg.type(), msg.text()));
-        page.onPageError(err -> log.error("BROWSER PAGE ERROR: {}", err));
-    }
-
-    @AfterEach
-    void captureScreenshotAndClosePage(TestInfo testInfo) {
-        try {
-            if (page != null) {
-                byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
-                Allure.addAttachment(
-                    "📸 Screenshot: " + testInfo.getDisplayName(),
-                    "image/png",
-                    new ByteArrayInputStream(screenshot),
-                    ".png"
-                );
-            }
-        } catch (Exception e) {
-            // Screenshot is diagnostics only; the test result must not depend on it.
-            log.debug("Could not capture screenshot: {}", e.getMessage());
-        } finally {
-            if (page != null) {
-                page.close();
-            }
-            if (context != null) {
-                context.close();
-            }
-        }
     }
 
     /**
-     * Runs even when the test failed. Cleanup failures are reported as failures of the test:
+     * Runs even when the test failed, and after the {@code @AfterEach} methods of subclasses (JUnit runs
+     * those first), so the browser is already closed. Cleanup failures are reported as failures of the test:
      * leftover data would break later tests, so they must not be swallowed.
      */
     @AfterEach
@@ -129,13 +80,7 @@ public abstract class BaseE2ETest {
     }
 
     @AfterAll
-    void tearDownSuite() {
-        if (browser != null) {
-            browser.close();
-        }
-        if (playwright != null) {
-            playwright.close();
-        }
+    void closeDatabase() {
         if (database != null) {
             database.close();
         }

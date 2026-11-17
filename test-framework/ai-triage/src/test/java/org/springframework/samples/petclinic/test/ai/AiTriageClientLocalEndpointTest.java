@@ -63,7 +63,25 @@ class AiTriageClientLocalEndpointTest {
             public String aiBaseUrl() { return baseUrl; }
             public String aiApiKey() { return "test-key"; }
             public String aiModel() { return "test-model"; }
+            public int aiTriageMaxCalls() { return 5; }
         });
+    }
+
+    @Test
+    @DisplayName("Without a key, a model or an address nothing is sent and the missing settings are named")
+    void missingSettingsAreReported() {
+        AiTriageClient unconfigured = new AiTriageClient(new AiTriageConfig() {
+            public boolean aiTriageEnabled() { return true; }
+            public String aiBaseUrl() { return localUrl(); }
+            public String aiApiKey() { return null; }
+            public String aiModel() { return " "; }
+            public int aiTriageMaxCalls() { return 5; }
+        });
+
+        String analysis = unconfigured.analyzeFailure("SomeTest#fails", new RuntimeException("x"), null);
+
+        assertThat(analysis).startsWith("⚠").contains("ai.api.key", "ai.model").doesNotContain("ai.base.url");
+        assertThat(path.get()).as("request sent to the endpoint").isNull();
     }
 
     private String localUrl() {

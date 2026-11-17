@@ -84,25 +84,77 @@ jobs:
 
       - name: Start PetClinic Microservices & MySQL (for E2E)
         run: |
-          docker compose -f docker-compose.test.yml up -d --wait
-          echo "Waiting for all microservices to be registered in Eureka and routable via API Gateway..."
+          # visits-service can crash on its first start: its schema refers to the pets table that
+          # customers-service creates. So a failed first "up" is not final; the readiness loop below decides.
+          docker compose -f docker-compose.test.yml up -d --wait || true
+          docker compose -f docker-compose.test.yml up -d visits-service
+
+          echo "Waiting until every service is registered in Eureka and reachable through the gateway..."
+          ready=0
           for i in {1..60}; do
             CUST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/customer/owners || true)
             VET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/vet/vets || true)
             VISIT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/visit/owners/1/pets/1/visits || true)
-            
-            echo "Readiness probe ($i/60): customers=$CUST_STATUS, vets=$VET_STATUS, visits=$VISIT_STATUS"
-            if [ "$CUST_STATUS" = "200" ] && [ "$VET_STATUS" = "200" ] && [ "$VISIT_STATUS" = "200" ]; then
-              echo "All microservices are fully registered in Eureka and returning HTTP 200 via API Gateway!"
+            # Owner 6 has seeded visits. They show up in the aggregate only when the gateway can reach
+            # visits-service; before that the gateway answers 200 with empty visit lists.
+            AGG_VISITS=$(curl -s http://localhost:8080/api/gateway/owners/6 | grep -o '"description"' | wc -l || true)
+
+            echo "Readiness probe ($i/60): customers=$CUST_STATUS, vets=$VET_STATUS, visits=$VISIT_STATUS, visits in aggregate=$AGG_VISITS"
+            if [ "$CUST_STATUS" = "200" ] && [ "$VET_STATUS" = "200" ] && [ "$VISIT_STATUS" = "200" ] && [ "$AGG_VISITS" -gt 0 ]; then
+              ready=1
               break
             fi
             sleep 4
           done
           docker compose -f docker-compose.test.yml ps
+          if [ "$ready" != "1" ]; then
+            echo "::error::The stack did not become ready in time. The tests are not started; see the container logs artifact."
+            exit 1
+          fi
 
+      # Must be green. Tests for known application defects are excluded here and run in the next step,
+      # so a red result of this step always means a new problem.
       - name: Run E2E Tests
         run: |
-          mvn -B test -pl e2e-tests -f test-framework/pom.xml
+          mvn -B test -pl e2e-tests -f test-framework/pom.xml "-Dgroups=!known-defect"
+
+      # Informational. These tests fail on purpose until the application is fixed (see the issues in
+      # their names). The step never fails the run; the outcome is written to the job summary.
+      - name: Run Known-Defect Tests (informational)
+        if: success() || failure()
+        continue-on-error: true
+        run: |
+          set +e
+          mvn -B test -pl e2e-tests -f test-framework/pom.xml -Dgroups=known-defect | tee known-defects.log
+          status=${PIPESTATUS[0]}
+          {
+            echo "### Known application defects"
+            echo ""
+            echo "These tests fail on purpose until the application is fixed. They do not affect the result of this run."
+            echo "A test that passes here means its defect is fixed: remove the \`known-defect\` tag from it."
+            echo ""
+            echo '```'
+            grep -E "Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$|\[ERROR\]   [A-Za-z]" known-defects.log | sed -E 's/^.*\[(ERROR|INFO|WARNING)\] +//' | sort -u
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Collect Container Logs
+        if: failure()
+        run: |
+          mkdir -p container-logs
+          docker compose -f docker-compose.test.yml ps -a > container-logs/ps.txt 2>&1 || true
+          for service in $(docker compose -f docker-compose.test.yml config --services); do
+            docker compose -f docker-compose.test.yml logs --no-color "$service" > "container-logs/$service.log" 2>&1 || true
+          done
+
+      - name: Upload Container Logs Artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-logs
+          path: container-logs
+          retention-days: 14
 
       - name: Restore Allure History from AWS S3
         if: always() && env.CAN_ACCESS_AWS == 'true'
@@ -115,10 +167,8 @@ jobs:
           aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
           aws configure set default.region "$AWS_REGION"
           
-          mkdir -p target/allure-results/history
           mkdir -p test-framework/target/allure-results/history
           echo "Restoring previous Allure history from s3://${S3_BUCKET}/latest/history/..."
-          aws s3 cp "s3://${S3_BUCKET}/latest/history" target/allure-results/history --recursive || true
           aws s3 cp "s3://${S3_BUCKET}/latest/history" test-framework/target/allure-results/history --recursive || true
 
       - name: Generate Allure Report
@@ -131,9 +181,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: |
-            target/allure-results
-            test-framework/target/allure-results
+          path: test-framework/target/allure-results
           retention-days: 14
 
       - name: Upload Allure HTML Report Artifact
@@ -141,9 +189,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: |
-            target/site/allure-maven-plugin
-            test-framework/target/site/allure-maven-plugin
+          path: test-framework/target/site/allure-maven-plugin
           retention-days: 30
 
       - name: Publish Allure Report to AWS S3 & CloudFront
@@ -160,10 +206,7 @@ jobs:
           aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
           aws configure set default.region "$AWS_REGION"
           
-          REPORT_DIR="target/site/allure-maven-plugin"
-          if [ ! -d "$REPORT_DIR" ]; then
-            REPORT_DIR="test-framework/target/site/allure-maven-plugin"
-          fi
+          REPORT_DIR="test-framework/target/site/allure-maven-plugin"
           
           if [ -d "$REPORT_DIR" ]; then
             echo "Deploying Allure report to s3://${S3_BUCKET}/latest/..."

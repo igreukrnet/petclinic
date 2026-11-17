@@ -8,19 +8,29 @@ import org.springframework.samples.petclinic.test.core.model.request.VisitReques
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class TestDataGenerator {
 
     private static final Faker FAKER = new Faker(Locale.ENGLISH);
+    private static final AtomicLong TELEPHONE_SEQUENCE = new AtomicLong(System.currentTimeMillis());
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    /**
+     * A 10-digit telephone that does not repeat within a run: a counter that starts at the clock, so two
+     * runs do not produce the same numbers either. Tests find their owner by telephone, so it must be unique.
+     */
+    static String uniqueTelephone() {
+        long sequence = TELEPHONE_SEQUENCE.incrementAndGet() % 9_000_000_000L;
+        return String.valueOf(1_000_000_000L + sequence);
+    }
 
     public static OwnerRequest generateOwnerRequest() {
         String firstName = FAKER.name().firstName().replaceAll("[^a-zA-Z]", "");
         String lastName = FAKER.name().lastName().replaceAll("[^a-zA-Z]", "");
         String address = FAKER.address().streetAddress();
         String city = FAKER.address().city();
-        // Strict digits up to 12 chars: @Digits(fraction = 0, integer = 12), ensure starting with non-zero digit
-        String telephone = String.valueOf(FAKER.number().numberBetween(1000000000L, 9999999999L));
+        String telephone = uniqueTelephone();
 
         return new OwnerRequest(firstName, lastName, address, city, telephone);
     }
@@ -30,7 +40,7 @@ public class TestDataGenerator {
         String cleanLastName = lastName.replaceAll("[^a-zA-Z]", "");
         String address = FAKER.address().streetAddress();
         String city = FAKER.address().city();
-        String telephone = String.valueOf(FAKER.number().numberBetween(1000000000L, 9999999999L));
+        String telephone = uniqueTelephone();
 
         return new OwnerRequest(firstName, cleanLastName, address, city, telephone);
     }

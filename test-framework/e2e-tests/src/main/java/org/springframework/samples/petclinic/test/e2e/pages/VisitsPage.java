@@ -5,6 +5,8 @@ import com.microsoft.playwright.Page;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.VisitRequest;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
 public class VisitsPage extends FormPage {
 
     public static final String DATE = "#visit-date";
@@ -16,7 +18,8 @@ public class VisitsPage extends FormPage {
 
     @Step("Open Visits page for owner {ownerId} and pet {petId}")
     public VisitsPage open(int ownerId, int petId) {
-        navigate("/owners/" + ownerId + "/pets/" + petId + "/visits");
+        new OwnerDetailsPage(page).open(ownerId).clickAddVisit(ownerId, petId);
+        assertThat(page.locator(DESCRIPTION)).isVisible();
         return this;
     }
 

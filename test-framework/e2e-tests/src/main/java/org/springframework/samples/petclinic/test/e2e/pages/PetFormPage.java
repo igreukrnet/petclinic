@@ -2,8 +2,11 @@ package org.springframework.samples.petclinic.test.e2e.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import io.qameta.allure.Step;
 import org.springframework.samples.petclinic.test.core.model.request.PetRequest;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class PetFormPage extends FormPage {
 
@@ -17,7 +20,10 @@ public class PetFormPage extends FormPage {
 
     @Step("Open New Pet form for owner ID: {ownerId}")
     public PetFormPage openNew(int ownerId) {
-        navigate("/owners/" + ownerId + "/new-pet");
+        new OwnerDetailsPage(page).open(ownerId);
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Add New Pet")).click();
+        waitForLoadingSpinner();
+        assertThat(page.locator(NAME)).isVisible();
         return this;
     }
 

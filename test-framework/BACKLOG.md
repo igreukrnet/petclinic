@@ -5,8 +5,7 @@ Update this file when an item is started, finished or dropped.
 
 ## Deferred from P3 (coverage)
 
-- **Component tests: nothing planned.** Done for customers, vets, visits and the gateway (details: `HANDOFF.md`,
-  section 10 and the sections after it). Open work there depends on the decisions below.
+- **Component tests: nothing planned.** Done for customers, vets, visits and the gateway. Open work there depends on the decisions below.
 - **UI: more form cases.** Done: required fields, telephone pattern and `maxlength`, blank names, future birth date,
   the Veterinarians page. Not done, because the expected behaviour is undecided: a visit description of only spaces
   (see the decision on empty descriptions below) and a description over 8192 characters typed by a user.
@@ -42,8 +41,6 @@ Update this file when an item is started, finished or dropped.
 
 ## Known weaknesses in the framework (not planned yet)
 
-- `OwnersPage.isOwnerPresent` returns `false` when the row does not appear within 5 s (it catches only
-  `TimeoutError`). The search filters on the client, so a sure signal for "the list is ready" is still missing.
 - `-Dservice.jar=...` applies to every service test class of a run, so it only makes sense with `-Dtest=` for one
   service. The gateway tests use their own `-Dgateway.jar=...`.
 - The component test of customers-service cleans up with separate deletes: its database has no `visits` table,
@@ -58,3 +55,17 @@ Update this file when an item is started, finished or dropped.
   transaction; the live path of `ai-triage` is tested against a local fake endpoint (`AiTriageClientLocalEndpointTest`,
   run by Fast Checks); `VetsPage` is used; `OwnerDetailsPage.hasPet` and `hasVisitDescription` wait for the page
   heading first and then read the page, so they fail loudly if the page never loads.
+- Audit fixes: E2E CI has a failing readiness check, container logs on failure and a separate informational step
+  for `known-defect` tests; `ci.yml` is removed; `BaseUiE2ETest` holds the browser (no static state); pages are
+  reached by clicks; `FormPage` records requests with `page.route`; HTTP timeouts in `ApiClient`; unique
+  telephones in `TestDataGenerator`; AI triage has no committed key or model and a call limit per run.
+
+## From the audit, not done yet
+
+- Faster component tests: a named, cached image per service, one MySQL per run, stop each gateway after its test,
+  Awaitility instead of hand-written polling.
+- Infrastructure: OIDC instead of IAM access keys, a lifecycle rule for `builds/`, actions pinned by commit,
+  image tags in `docker-compose.test.yml`.
+- Coverage: contract tests between the gateway and the services, outages on the live stack, field limits, XSS.
+- Deep links are answered with 404 by the gateway (see `README.md`): no issue is filed yet.
+- The two visit tests of `FormValidationUiE2ETest` are blocked by issue #1 and run only in the informational step.
