@@ -26,7 +26,8 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
  * that affects routing, retries, timeouts or circuit breakers (checked in its {@code api-gateway.yml}
  * and {@code application.yml}).
  * <p>
- * Circuit breaker state lives in the gateway, so tests that open a circuit start their own gateway.
+ * Circuit breaker state lives in the gateway, so tests that open a circuit start their own gateway
+ * and stop it when the test ends ({@link #stopGateways()}).
  */
 public abstract class BaseGatewayTest extends BaseServiceTest {
 
@@ -57,10 +58,18 @@ public abstract class BaseGatewayTest extends BaseServiceTest {
         }
     }
 
-    @AfterAll
-    void stopGatewaysAndStubs() {
+    /**
+     * Stops every gateway started so far. Classes that start a gateway per test call this after each test,
+     * so only one gateway is alive at a time.
+     */
+    protected void stopGateways() {
         gateways.forEach(GenericContainer::stop);
         gateways.clear();
+    }
+
+    @AfterAll
+    void stopGatewaysAndStubs() {
+        stopGateways();
         for (WireMockServer server : List.of(customers, visits, vets)) {
             if (server != null) {
                 server.stop();

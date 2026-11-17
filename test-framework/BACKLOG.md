@@ -45,8 +45,8 @@ Update this file when an item is started, finished or dropped.
   service. The gateway tests use their own `-Dgateway.jar=...`.
 - The component test of customers-service cleans up with separate deletes: its database has no `visits` table,
   so `Database.deleteOwnerCascade` cannot be used there.
-- Every component test class starts its own MySQL and service (about 1 to 1.5 minutes each locally, 30 to 40 s in CI).
-  Sharing containers between classes would be faster, but breaks the clean seed per class.
+- Every component test class starts its own MySQL and service. The service image is built once per run and
+  reused; MySQL is not shared (see "From the audit, not done yet").
 
 ## Done
 
@@ -59,11 +59,16 @@ Update this file when an item is started, finished or dropped.
   for `known-defect` tests; `ci.yml` is removed; `BaseUiE2ETest` holds the browser (no static state); pages are
   reached by clicks; `FormPage` records requests with `page.route`; HTTP timeouts in `ApiClient`; unique
   telephones in `TestDataGenerator`; AI triage has no committed key or model and a call limit per run.
+- Component test resources (audit step 6): one named service image per JAR, built once per run
+  (`BaseServiceTest.imageFor`, `petclinic-component-test/<jar>:local`, kept for the Docker layer cache);
+  the circuit breaker tests stop their gateway after each test, so one gateway is alive at a time instead of four;
+  Awaitility replaces the hand-written polling loop and the elapsed-time arithmetic. The static network of
+  `BaseComponentTest` was checked and kept: it is one network per run, removed by Ryuk.
 
 ## From the audit, not done yet
 
-- Faster component tests: a named, cached image per service, one MySQL per run, stop each gateway after its test,
-  Awaitility instead of hand-written polling.
+- Component tests still start one MySQL per test class. One MySQL per run needs the data to be reset between
+  classes (the services load their seed only at start), so it was left out of the resource clean-up.
 - Infrastructure: OIDC instead of IAM access keys, a lifecycle rule for `builds/`, actions pinned by commit,
   image tags in `docker-compose.test.yml`.
 - Coverage: contract tests between the gateway and the services, outages on the live stack, field limits, XSS.

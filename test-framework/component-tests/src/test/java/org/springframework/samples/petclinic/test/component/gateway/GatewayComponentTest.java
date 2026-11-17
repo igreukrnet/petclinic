@@ -10,6 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
@@ -22,6 +25,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -212,12 +216,19 @@ class GatewayComponentTest extends BaseGatewayTest {
     void slowDownstreamTimesOut() {
         customers.stubFor(get(urlEqualTo("/owners/1")).willReturn(okJson(OWNER_WITH_TWO_PETS).withFixedDelay(6000)));
 
-        long started = System.nanoTime();
-        int status = given(gateway).get("/api/customer/owners/1").statusCode();
-        long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-
-        assertThat(status).isEqualTo(503);
-        assertThat(elapsedMs).as("time until the gateway answered").isLessThan(5000);
+        // The 6 seconds are the simulated slowness of the service, not a wait of the test.
+        // The test waits only for the limit it checks: the gateway must give up within 5 seconds.
+        CompletableFuture<Integer> status =
+            CompletableFuture.supplyAsync(() -> given(gateway).get("/api/customer/owners/1").statusCode());
+        try {
+            await("the gateway gives up on the slow service")
+                .atMost(Duration.ofSeconds(5))
+                .until(status::isDone);
+            assertThat(status.join()).isEqualTo(503);
+        } finally {
+            // Let the request end before the next test resets the stubs.
+            status.handle((result, error) -> null).join();
+        }
     }
 
     @Tag("negative")

@@ -28,6 +28,12 @@ public abstract class BaseComponentTest extends BaseServiceTest {
     private static final String MYSQL_ALIAS = "mysql";
     protected static final int SERVICE_PORT = 8081;
 
+    /**
+     * One network for the whole run (one JVM), shared by every class: MySQL below is a static container
+     * that is bound to it. It is deliberately not closed by the tests. Testcontainers registers it with
+     * Ryuk, which removes it when the JVM ends, so no network is left behind; closing it after a class
+     * would break the next class.
+     */
     protected static final Network NETWORK = Network.newNetwork();
 
     @Container

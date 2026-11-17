@@ -4,13 +4,13 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.restassured.specification.RequestSpecification;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.time.Instant;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -19,11 +19,14 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.equalTo;
 
 /**
  * The circuit breaker of the real api-gateway. The breaker is made small so that a few calls are enough
  * (window of 4 calls, 5 seconds open, 2 trial calls); everything else is the gateway's own configuration.
- * Each test starts its own gateway, because circuit state lives in the gateway process.
+ * Each test starts its own gateway, because circuit state lives in the gateway process, and stops it
+ * afterwards, so only one gateway runs at a time.
  */
 @Epic("API gateway")
 @Feature("Circuit breaker")
@@ -46,6 +49,11 @@ class GatewayCircuitBreakerComponentTest extends BaseGatewayTest {
             "--resilience4j.circuitbreaker.instances.defaultCircuitBreaker.minimumNumberOfCalls=" + WINDOW,
             "--resilience4j.circuitbreaker.instances.defaultCircuitBreaker.waitDurationInOpenState=" + OPEN_FOR.toSeconds() + "s",
             "--resilience4j.circuitbreaker.instances.defaultCircuitBreaker.permittedNumberOfCallsInHalfOpenState=2");
+    }
+
+    @AfterEach
+    void stopGateway() {
+        stopGateways();
     }
 
     private String circuitState() {
@@ -88,12 +96,12 @@ class GatewayCircuitBreakerComponentTest extends BaseGatewayTest {
         customers.resetAll();
         customers.stubFor(get(urlEqualTo("/owners/1")).willReturn(okJson("{\"id\":1}")));
 
-        Instant deadline = Instant.now().plus(OPEN_FOR).plusSeconds(10);
-        int status;
-        do {
-            status = given(gateway).get("/api/customer/owners/1").statusCode();
-        } while (status != 200 && Instant.now().isBefore(deadline));
-        assertThat(status).as("a call after the open period reaches the recovered service").isEqualTo(200);
+        // While the circuit is open the gateway answers 503 without calling the service.
+        // After the open period it lets a trial call through, which reaches the recovered service.
+        await("a call after the open period reaches the recovered service")
+            .atMost(OPEN_FOR.plusSeconds(10))
+            .pollInterval(Duration.ofMillis(500))
+            .until(() -> given(gateway).get("/api/customer/owners/1").statusCode(), equalTo(200));
 
         given(gateway).get("/api/customer/owners/1").then().statusCode(200);
         assertThat(circuitState()).isEqualTo("CLOSED");

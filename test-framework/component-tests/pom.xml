@@ -51,6 +51,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Waiting for a condition instead of hand-written polling -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
