@@ -64,13 +64,20 @@ Update this file when an item is started, finished or dropped.
   the circuit breaker tests stop their gateway after each test, so one gateway is alive at a time instead of four;
   Awaitility replaces the hand-written polling loop and the elapsed-time arithmetic. The static network of
   `BaseComponentTest` was checked and kept: it is one network per run, removed by Ryuk.
+- CI and Docker hygiene (the safe part of audit step 7): the pre-built images of `docker-compose.test.yml` are
+  pinned by tag and digest (3.4.1); the actions of `e2e-tests.yml` and `fast-checks.yml` are pinned by commit;
+  secrets and context values reach the scripts of `e2e-tests.yml` only through `env`; a new E2E run no longer
+  cancels a running one (`cancel-in-progress: false`); a 30-day lifecycle rule for `builds/` is written in Terraform.
 
 ## From the audit, not done yet
 
 - Component tests still start one MySQL per test class. One MySQL per run needs the data to be reset between
   classes (the services load their seed only at start), so it was left out of the resource clean-up.
-- Infrastructure: OIDC instead of IAM access keys, a lifecycle rule for `builds/`, actions pinned by commit,
-  image tags in `docker-compose.test.yml`.
+- Infrastructure: OIDC instead of IAM access keys (the key pair is still a repository secret and is in the local
+  Terraform state); a remote backend for the state; pin the actions of `terraform.yml` and
+  `terraform-deploy.yml` by commit; pin the images of `docker-compose.local-full.yml`.
+- The lifecycle rule for `builds/` is in `terraform/main.tf` but not applied to AWS yet: run the
+  "Terraform Deploy" workflow (plan, then apply) or `terraform apply` locally.
 - Coverage: contract tests between the gateway and the services, outages on the live stack, field limits, XSS.
 - Deep links are answered with 404 by the gateway (see `README.md`): no issue is filed yet.
 - The two visit tests of `FormValidationUiE2ETest` are blocked by issue #1 and run only in the informational step.

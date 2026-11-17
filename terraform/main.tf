@@ -15,7 +15,7 @@ terraform {
   # backend "s3" {
   #   bucket         = "petclinic-qa-tfstate-<random>"
   #   key            = "reports/terraform.tfstate"
-  #   region         = "eu-central-1"
+  #   region         = "eu-north-1"
   #   dynamodb_table = "petclinic-qa-tflock"
   # }
 }
@@ -60,6 +60,25 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "allure_reports" {
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Archived reports of single runs (builds/<run number>/) are removed after 30 days.
+# latest/ is outside the prefix and is never expired: it holds the current report and the trend history.
+resource "aws_s3_bucket_lifecycle_configuration" "allure_reports" {
+  bucket = aws_s3_bucket.allure_reports.id
+
+  rule {
+    id     = "expire-archived-builds"
+    status = "Enabled"
+
+    filter {
+      prefix = "builds/"
+    }
+
+    expiration {
+      days = 30
     }
   }
 }
